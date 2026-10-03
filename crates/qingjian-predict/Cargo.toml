@@ -20,11 +20,14 @@ tracing.workspace = true
 reqwest.workspace = true
 uuid.workspace = true
 
-# 本地神经翻译：ct2rs 绑定 CTranslate2，只在开 feature 时编译，默认 Ruy 后端、CPU int8
-ct2rs = { version = "0.10", optional = true, default-features = false, features = ["sentencepiece", "ruy"] }
+# 本地神经翻译：ct2rs 绑定 CTranslate2，只在开 feature 时编译。SentencePiece 固定需要，
+# 计算后端（Ruy / MKL / 预编译 SDK）由下面的 feature 决定。
+ct2rs = { version = "0.10", optional = true, default-features = false, features = ["sentencepiece"] }
 
 [features]
-# 端侧整句翻译：离线、免费、数据不出本机
-local-nmt = ["dep:ct2rs"]
-# 满血后端：预编译 oneMKL，x86 上更快，运行时更大
+# 轻量后端：源码编译 Ruy，零外部依赖、包小，但 x86 桌面慢（实测中位数约 956ms）
+local-nmt = ["dep:ct2rs", "ct2rs/ruy"]
+# 满血 oneMKL：Windows 静态 MKL 实测运行时不被 CT2 识别（No SGEMM），暂不可用，保留备查
 local-nmt-mkl = ["dep:ct2rs", "ct2rs/mkl"]
+# 满血预编译：链接现成 ctranslate2.dll（内含 oneDNN），快；需 LIBRARY_PATH 指向 SDK 的 lib 目录
+local-nmt-system = ["dep:ct2rs", "ct2rs/system"]

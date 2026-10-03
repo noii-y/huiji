@@ -1,0 +1,101 @@
+﻿编号	中文原句	场景	云端译文	云端延迟(ms)
+1	你今天晚上有空吗？	日常聊天	Are you free tonight?	100
+2	我刚下班，正在回家的路上。	日常聊天	I just got off work and was on my way home.	50
+3	周末一起去看电影吧。	日常聊天	Let's go to the movies this weekend.	50
+4	你吃饭了吗？我还没吃呢。	日常聊天	Did you eat? I haven't eaten yet.	50
+5	今天天气真不错，适合出去走走。	日常聊天	It's a nice day. It'll fit for a walk.	100
+6	我到楼下了，你下来吧。	日常聊天	I'll be downstairs, you come down.	50
+7	明天记得带伞，好像要下雨。	日常聊天	Remember to bring an umbrella tomorrow, like it's gonna rain.	50
+8	你在干嘛呢？怎么半天不回消息。	日常聊天	What are you doing? Why don't you hear from me?	50
+9	我先洗个澡，一会儿聊。	日常聊天	I'll take a shower and talk to you later.	50
+10	早点休息，别熬夜了。	日常聊天	Get some rest. Don't stay up all night.	50
+11	我想吃火锅，你觉得哪家好吃？	生活出行	I want hotpots. Which one do you think is good?	50
+12	帮我点一杯奶茶，三分糖去冰。	生活出行	Order me a cup of milk tea and three cents of sugar to ice.	100
+13	这个多少钱？能便宜点吗？	生活出行	How much is this? Can it be cheaper?	50
+14	我在地铁站门口等你。	生活出行	I'll wait for you at the subway.	50
+15	外卖到了，你去拿一下。	生活出行	I've got the takeout. You go get it.	50
+16	菜有点咸了，下次少放点盐。	生活出行	The food's a little salty. Put less salt next time.	100
+17	我订了明天早上八点的闹钟。	生活出行	I've booked an alarm tomorrow at 8:00 a.m.	50
+18	超市里人好多，排队排了半天。	生活出行	There's a lot of people in the supermarket, lined up for half day.	100
+19	这双鞋有四十二码的吗？	生活出行	Do you have 42 yards of these?	50
+20	我们坐高铁还是飞机去？	生活出行	Shall we take the high-speed train or the plane?	50
+21	这个需求今天能上线吗？	工作职场	Can you get this on the line today?	50
+22	下午三点开会，别迟到了。	工作职场	The meeting will be held at 3 p.m., and don't be late.	100
+23	文档我已经更新好了，你看一下。	工作职场	I've updated the files. Look at them.	50
+24	这个 bug 我复现了，正在排查。	工作职场	This bug I'm back, checking.	50
+25	麻烦把昨天的报表发我一份。	工作职场	Please send me a copy of yesterday's report.	50
+26	项目进度比预期慢了两天。	工作职场	The project is two days behind schedule.	50
+27	客户那边还没回复，我再催催。	工作职场	The client hasn't answered yet. I'll be in a hurry.	50
+28	你把代码提交一下，我来 review。	工作职场	I'll see you later.	50
+29	会议改到明天上午十点了。	工作职场	The meeting has been rescheduled to 10:00 tomorrow morning.	50
+30	这个方案我觉得还得再想想。	工作职场	I think we need to think about this.	50
+31	我今天好累啊，不想动。	情绪口语	I'm so tired today, I don't want to move.	101
+32	真的吗？太好啦！	情绪口语	Really? That's great!	50
+33	哎呀，我忘了带钥匙。	情绪口语	Gee, I forgot my keys.	50
+34	这也太搞笑了吧，哈哈哈。	情绪口语	That's so funny, huh?	50
+35	我有点紧张，怕搞砸了。	情绪口语	I'm a little nervous, afraid of screw-up.	50
+36	算了，不想了，顺其自然吧。	情绪口语	Forget it. Just let it go.	50
+37	气死我了，怎么又这样。	情绪口语	I'm so mad at you. How come?	50
+38	哇，这个也太好看了吧！	情绪口语	Wow, this is so beautiful!	50
+39	我好纠结，不知道选哪个。	情绪口语	I don't know which one.	50
+40	没事，慢慢来，不着急。	情绪口语	It's okay, take it easy. Don't worry.	50
+41	你知道他去哪儿了吗？	问句	Do you know where he went?	50
+42	这个字怎么念来着？	问句	What's the word again?	50
+43	为什么我的手机这么卡？	问句	Why is my phone so stuck?	50
+44	我们几点出发比较合适？	问句	What time do we get out of here?	50
+45	你有没有看见我的眼镜？	问句	Did you see my glasses?	50
+46	这家店几点关门啊？	问句	What time does this place close?	50
+47	你觉得我穿这件好看吗？	问句	Do you think I look good in this one?	50
+48	怎么办？我把杯子打碎了。	问句	What do we do? I broke the glass.	50
+49	这个怎么用？教教我呗。	问句	How do you use this? Teach me.	50
+50	还有多远才到啊？	问句	How far is it?	50
+51	这波操作我是真的服了。	网络用语	This wave is my real suit.	50
+52	绝绝子，这也太好吃了吧。	网络用语	That's too good, Yuko.	50
+53	我直接一整个无语住了。	网络用语	I'm straight with the whole quiet.	50
+54	这就是传说中的神仙颜值吗。	网络用语	That's what the legend says.	50
+55	摸鱼一时爽，一直摸鱼一直爽。	网络用语	Feel the fish for a while, feel the fish all the time.	50
+56	破防了家人们，真的好感动。	网络用语	It's really moving.	50
+57	这剧情也太离谱了吧。	网络用语	It's crazy.	50
+58	笑死，根本停不下来。	网络用语	I can't stop laughing.	50
+59	你礼貌吗？我不理解但大受震撼。	网络用语	Are you being polite? I don't understand, but it was a shock.	101
+60	这波啊，这波是在大气层。	网络用语	This wave, it's in the atmosphere.	50
+61	我本来打算今天去图书馆看书的，结果下大雨就没去成。	长句	I was going to the library today, and it didn't rain.	50
+62	如果你明天有空的话，我们可以一起去那个新开的商场逛逛。	长句	If you're free tomorrow, we can go to that new mall together.	101
+63	他说他会在下班之前把报告写完，但我觉得可能来不及。	长句	He said that he would finish the report before he left work, but I thought it might be too late.	100
+64	这件事情没有你想的那么简单，我们得好好商量一下。	长句	It's not as simple as you think. We have to talk about it.	101
+65	我昨天晚上失眠了，翻来覆去怎么都睡不着。	长句	I couldn't sleep last night, and I can't fall asleep.	100
+66	不管结果怎么样，至少我们努力过了，就不会后悔。	长句	Whatever the outcome, at least we have tried and will not regret it.	50
+67	那个电影我看了一半就睡着了，听说结局还挺反转的。	长句	I fell asleep when I saw that movie, and I heard the ending was a little reversed.	101
+68	等我把手上这点活儿干完，就陪你下楼遛狗。	长句	When I'm done with this, I'll walk you downstairs.	101
+69	她不仅人长得漂亮，性格也特别好，大家都很喜欢她。	长句	She's not only pretty, she's special. Everyone likes her.	101
+70	我记得钥匙就放在桌上的，怎么一转眼就不见了。	长句	I remember the key was on the table, and it disappeared.	50
+71	现在是下午四点半，还有两个小时下班。	数字时间	It's 4:30 p.m. and two hours to work.	100
+72	我们约在周六上午十点，老地方见。	数字时间	We'll see you at the old place on Saturday morning, 10:00 a.m.	101
+73	这个月房租是三千二，我已经转给房东了。	数字时间	The rent this month is $3,200, and I've already transferred it to the landlord.	100
+74	他今年二十五岁，比我小两岁。	数字时间	He's 25 years old, two years younger than me.	50
+75	火车晚上七点二十发车，别误点了。	数字时间	The train leaves at 7:20 p.m. Don't miss it.	100
+76	我买了两张三十块钱的票，一共六十。	数字时间	I bought two tickets for $30, 60 bucks.	50
+77	从这儿到机场大概要四十分钟。	数字时间	Forty minutes from here to the airport.	50
+78	会议预计开一个半小时。	数字时间	The meeting is expected to be held for an hour and a half.	50
+79	这家店开了快十年了，生意一直不错。	数字时间	This shop has been open for almost 10 years. Business is always good.	50
+80	我每天早上七点起床，八点出门。	数字时间	I get up at 7:00 a.m. every morning and leave at 8:00.	101
+81	手机快没电了，你带充电器了吗？	日常琐事	The phone's running out of power. Did you bring the charger?	101
+82	我把 Wi-Fi 密码忘了，你知道是多少吗？	日常琐事	I forgot the Wi-Fi password. Do you know how much it is?	101
+83	快递还没到，我查一下物流。	日常琐事	The delivery hasn't arrived yet. I'll check the logistics.	100
+84	这衣服得手洗，不能放洗衣机。	日常琐事	The clothes have to be washed hands and not put in the washing machine.	101
+85	我有点感冒，嗓子不太舒服。	日常琐事	I'm a little cold and my voice is not feeling well.	101
+86	多喝点热水，好好睡一觉就好了。	日常琐事	Have some more hot water and get a good night's sleep.	50
+87	你家猫也太可爱了吧，叫什么名字？	日常琐事	Your cat is so cute. What's his name?	100
+88	楼下新开了家咖啡店，改天去尝尝。	日常琐事	There's a new coffee shop downstairs. We'll try it sometime.	101
+89	我把窗户打开透透气，屋里有点闷。	日常琐事	I opened the window for air, and it was a little boring in the house.	100
+90	钥匙在门垫下面，你自己开门吧。	日常琐事	The key is under the mat. Open it yourself.	50
+91	这道题我想了半天也没弄明白。	日常琐事	I haven't figured it out for a while.	101
+92	老师说明天要交作业，你写完没？	日常琐事	The teacher says he's gonna give you his homework. Are you finished?	100
+93	我办了张健身卡，希望能坚持下去。	日常琐事	I've got a fitness card, and I hope it lasts.	50
+94	路上注意安全，到了给我发个消息。	日常琐事	Be safe on the way. Send me a message when you get there.	50
+95	这电视信号不太好，画面一卡一卡的。	日常琐事	It's not a good TV signal. The picture is one card and one card.	100
+96	我把垃圾顺手带下去扔了。	日常琐事	I took the garbage and threw it away.	50
+97	你声音怎么了？是不是感冒了？	日常琐事	What happened to your voice? Did you catch a cold?	50
+98	今天地铁特别挤，差点没挤上去。	日常琐事	The subway was particularly crowded today, almost not.	50
+99	我给你留了点饭，在锅里热着呢。	日常琐事	I left you some food. It's hot in the pot.	50
+100	不管多晚，到家了记得跟我说一声。	日常琐事	Tell me when you get home, no matter how late.	50

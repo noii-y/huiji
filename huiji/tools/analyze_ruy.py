@@ -39,7 +39,7 @@ def repetition_flags(text):
 
 def main():
     path = sys.argv[1]
-    with open(path, encoding="utf-8") as handle:
+    with open(path, encoding="utf-8-sig") as handle:
         rows = list(csv.DictReader(handle, delimiter="\t"))
 
     latencies = sorted(int(row["云端延迟(ms)"]) for row in rows)

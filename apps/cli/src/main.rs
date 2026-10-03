@@ -25,7 +25,11 @@ use qingjian_learning::FrequencyLearner;
 use qingjian_lm::BigramModel;
 use qingjian_platform::{Config, Scheme};
 use qingjian_predict::CloudPredictor;
-#[cfg(feature = "local-nmt")]
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
 use qingjian_predict::LocalTranslator;
 use qingjian_translate::Glossary;
 
@@ -372,12 +376,20 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
     }
     if let Some(model_dir) = &args.local_nmt {
         // 端侧优先：给了本地模型就离线翻译，不碰云端
-        #[cfg(feature = "local-nmt")]
+        #[cfg(any(
+            feature = "local-nmt",
+            feature = "local-nmt-mkl",
+            feature = "local-nmt-system"
+        ))]
         {
             let predictor = LocalTranslator::new(model_dir.clone())?;
             engine = engine.with_predictor(Box::new(predictor));
         }
-        #[cfg(not(feature = "local-nmt"))]
+        #[cfg(not(any(
+            feature = "local-nmt",
+            feature = "local-nmt-mkl",
+            feature = "local-nmt-system"
+        )))]
         {
             let _ = model_dir;
             return Err(CliError::LocalNmtNotCompiled);

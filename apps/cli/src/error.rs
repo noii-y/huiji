@@ -3,7 +3,11 @@ use qingjian_learning::LearningError;
 use qingjian_lm::LmError;
 use qingjian_neural::NeuralError;
 use qingjian_platform::ConfigError;
-#[cfg(feature = "local-nmt")]
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
 use qingjian_predict::LocalTranslateError;
 use qingjian_predict::PredictError;
 use qingjian_translate::GlossaryError;
@@ -58,12 +62,20 @@ pub enum CliError {
     TranslationTimeout(u64),
 
     /// 端侧翻译模型加载或推理失败。
-    #[cfg(feature = "local-nmt")]
+    #[cfg(any(
+        feature = "local-nmt",
+        feature = "local-nmt-mkl",
+        feature = "local-nmt-system"
+    ))]
     #[error(transparent)]
     LocalNmt(#[from] LocalTranslateError),
 
     /// 给了 --local-nmt 但没以 local-nmt feature 编译。
-    #[cfg(not(feature = "local-nmt"))]
+    #[cfg(not(any(
+        feature = "local-nmt",
+        feature = "local-nmt-mkl",
+        feature = "local-nmt-system"
+    )))]
     #[error("端侧翻译未编入：请用 --features local-nmt 重新编译 CLI")]
     LocalNmtNotCompiled,
 }

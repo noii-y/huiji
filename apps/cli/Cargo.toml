@@ -12,6 +12,10 @@ workspace = true
 [features]
 # 端侧整句翻译：编译 ct2rs/CTranslate2，离线翻译、数据不出本机
 local-nmt = ["qingjian-predict/local-nmt"]
+# 满血 oneMKL（暂不可用，保留备查）
+local-nmt-mkl = ["qingjian-predict/local-nmt-mkl"]
+# 满血预编译 SDK（内含 oneDNN，推荐）
+local-nmt-system = ["qingjian-predict/local-nmt-system"]
 
 [dependencies]
 clap.workspace = true
