@@ -69,6 +69,9 @@ pub struct Router {
     /// 整句补全（preedit 右侧、Tab 上屏）；缓冲变化时清空。
     sentence: Option<String>,
 
+    /// 挂的是端侧翻译器：sentence 是英文译文、仅供参考，Tab 不上屏（照常翻页）。
+    local_translation: bool,
+
     /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
     notice: Option<String>,
 
@@ -134,6 +137,7 @@ impl Router {
             pending_selection: None,
             selection_seq: 0,
             sentence: None,
+            local_translation: false,
             notice: None,
             highlight: 0,
             navigated: false,

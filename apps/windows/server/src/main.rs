@@ -189,6 +189,8 @@ fn main() {
     dispatch::attach_cloud(&mut engine, &config.predict);
     let router_config = RouterConfig::from(&config);
     let mut router = Router::new(engine, router_config.clone());
+    // 端侧整句翻译：本地模型在就离线翻译、覆盖云端；返回 false 则沿用上面的 attach_cloud
+    router.attach_local_translator(user_dir().as_deref(), &root);
     let model_path = dispatch::find_model(user_dir().as_deref(), &root);
     router.configure_local_model(model_path.clone(), &config.model);
     router.configure_code_table(dispatch::find_code_table(user_dir().as_deref(), &root));

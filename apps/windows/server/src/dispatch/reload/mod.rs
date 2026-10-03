@@ -11,6 +11,12 @@ use std::time::{Duration, Instant, SystemTime};
 
 use qingjian_core::{Engine, Language, NoGlossFiller, NoPredictor, NoTranslator};
 use qingjian_platform::{Config, code_tables};
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+use qingjian_predict::LocalTranslator;
 use qingjian_predict::{CloudGlossFiller, CloudPredictor, PredictConfig};
 
 pub(super) use self::state::ConfigReload;
@@ -55,6 +61,69 @@ pub fn attach_cloud(engine: &mut Engine, predict: &PredictConfig) {
             engine.set_gloss_filler(Box::new(NoGlossFiller));
         }
     }
+}
+
+/// 端侧整句翻译优先：本地有 opus-mt 模型就挂 [`LocalTranslator`]（离线、数据不出本机），
+/// 覆盖 attach_cloud 挂的云端 / 空实现。返回是否启用，Router 据此决定 Tab 行为。
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+impl Router {
+    pub fn attach_local_translator(
+        &mut self,
+        user_dir: Option<&Path>,
+        bundled_root: &Path,
+    ) -> bool {
+        let Some(model) = find_translation_model(user_dir, bundled_root) else {
+            return false;
+        };
+        match LocalTranslator::new(&model) {
+            Ok(translator) => {
+                self.engine.set_predictor(Box::new(translator));
+                self.local_translation = true;
+                tracing::info!(model = %model.display(), "端侧整句翻译已接入（离线）");
+                true
+            }
+            Err(error) => {
+                tracing::warn!(%error, "端侧翻译模型加载失败，沿用云端 / 本地候选");
+                false
+            }
+        }
+    }
+}
+
+#[cfg(not(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+)))]
+impl Router {
+    pub fn attach_local_translator(
+        &mut self,
+        _user_dir: Option<&Path>,
+        _bundled_root: &Path,
+    ) -> bool {
+        false
+    }
+}
+
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+/// 找端侧翻译模型目录：用户目录 models/ 优先，随包 data/models/ 兜底；目录里要有 model.bin。
+fn find_translation_model(user_dir: Option<&Path>, bundled_root: &Path) -> Option<PathBuf> {
+    let candidates = [
+        user_dir.map(|dir| dir.join("models/opus-mt-zh-en-ct2")),
+        Some(bundled_root.join("data/models/opus-mt-zh-en-ct2")),
+    ];
+    candidates
+        .into_iter()
+        .flatten()
+        .find(|dir| dir.join("model.bin").is_file())
 }
 
 /// 学习语言变了就换释义表：关是不翻译；换语言重装随包 + 个人释义表，没有这门语言的表或装不上就保持原样。

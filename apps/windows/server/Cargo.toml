@@ -32,6 +32,12 @@ tracing-subscriber.workspace = true
 tracing-appender.workspace = true
 toml_edit.workspace = true
 
+[features]
+# 端侧整句翻译三后端，默认推荐 local-nmt-system（预编译 CT2 内含 oneDNN，构建需 LIBRARY_PATH 指向 SDK 的 lib）
+local-nmt = ["qingjian-predict/local-nmt"]
+local-nmt-mkl = ["qingjian-predict/local-nmt-mkl"]
+local-nmt-system = ["qingjian-predict/local-nmt-system"]
+
 [lints]
 workspace = true
 
