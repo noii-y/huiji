@@ -9,8 +9,10 @@ case "$(uname -s)" in
     ;;
   MINGW*|MSYS*|CYGWIN*)
     # Server 的 build.rs 会嵌 uiAccess manifest，嵌了它的测试二进制没签名起不来（os error 740）；
-    # 与 ci.yml 的 windows job 一样关掉
-    test_scope=(--workspace --exclude qingjian-macos)
+    # 与 ci.yml 的 windows job 一样关掉。
+    # 另排除 linux-server：它的 tests/vocabulary 集成测试（Alt+1 译词快捷键）在 Windows 跑不过，
+    # CI 的 windows job 本就只测 server / tsf / settings，linux 逻辑交给 core job 在 Ubuntu 上验。
+    test_scope=(--workspace --exclude qingjian-macos --exclude qingjian-linux-server)
     export QINGJIAN_UIACCESS=0
     ;;
   *)
