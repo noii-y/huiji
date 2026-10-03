@@ -324,6 +324,36 @@ fn punctuation_toggle_is_remembered_per_mode() {
     assert_eq!(commit.as_deref(), Some("hello，"));
 }
 
+#[test]
+fn ctrl_period_toggles_chinese_punctuation() {
+    let mut router = router();
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: false,
+    });
+    let ctrl_period = KeyEvent::new(0xBE, None, CTRL);
+    let comma = KeyEvent::new(0xBC, Some(','), Default::default());
+    // Ctrl+. 被吃掉、切成半角：随后逗号原样放行（半角交给应用）。
+    assert_eq!(press(&mut router, ctrl_period).0, KeyOutcome::Consumed);
+    assert_eq!(press(&mut router, comma).0, KeyOutcome::Passthrough);
+    // 再按一次切回全角：逗号转全角上屏。
+    press(&mut router, ctrl_period);
+    assert_eq!(press(&mut router, comma).1, Some("，".to_owned()));
+    // 带着 Shift 的 Ctrl+. 不当快捷键，照常放行给应用。
+    let shift_ctrl_period = KeyEvent::new(
+        0xBE,
+        None,
+        KeyModifiers {
+            shift: true,
+            ..CTRL
+        },
+    );
+    assert_eq!(
+        press(&mut router, shift_ctrl_period).0,
+        KeyOutcome::Passthrough
+    );
+}
+
 /// 中文模式下的 Shift 大写：缺省交给应用（与以前一致），配成 compose 才收进组句缓冲区。
 #[test]
 fn shift_letters_follow_the_configuration() {

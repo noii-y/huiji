@@ -1,12 +1,23 @@
 //! 组句中「修饰键 + 数字」的快捷键：上屏译词、删候选。与 macOS 壳对齐。
 
 use qingjian_core::{Candidate, CandidateList};
-use qingjian_platform::protocol::KeyModifiers;
+use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
 
-use super::Effect;
+use super::{Effect, codes};
 use crate::dispatch::Router;
 
 impl Router {
+    /// 切换类全局快捷键：不依赖组句、也不带数字。命中返回效果，没配到返回 `None`。
+    pub(super) fn apply_toggle_shortcut(&mut self, event: &KeyEvent) -> Option<Effect> {
+        let m = event.modifiers;
+        // Ctrl+. 切中英文标点（微软拼音）：只按 Ctrl，不带 Shift / Alt / Win。
+        if event.virtual_key == codes::OEM_PERIOD && m.ctrl && !m.shift && !m.alt && !m.win {
+            self.toggle_punctuation();
+            return Some(Effect::Changed(None));
+        }
+        None
+    }
+
     /// 配到哪组就上屏第一 / 第二个译词或删候选；哪组都不是返回 `None`，按普通键处理。
     pub(super) fn apply_digit_shortcut(
         &mut self,

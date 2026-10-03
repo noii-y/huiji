@@ -51,20 +51,7 @@ impl Router {
                 self.english = !self.english;
                 tracing::debug!(english = self.english, "状态条：切换中英模式");
             }
-            StatusEvent::TogglePunctuation => {
-                // 中英各记一份，切的是当前模式那份；还没报过模式时按中文算。
-                let english = self.english;
-                let full_width = !self.full_width_for(english);
-                let key = if english {
-                    self.config.english_full_width = full_width;
-                    "english_full_width_punctuation"
-                } else {
-                    self.config.full_width = full_width;
-                    "full_width_punctuation"
-                };
-                tracing::debug!(english, full_width, "状态条：切换全角标点");
-                self.persist("general", key, full_width);
-            }
+            StatusEvent::TogglePunctuation => self.toggle_punctuation(),
             StatusEvent::Moved(x, y) => {
                 self.config.status_pos = Some((x, y));
                 self.persist("status_bar", "x", i64::from(x));
@@ -107,6 +94,22 @@ impl Router {
         } else {
             self.config.full_width
         }
+    }
+
+    /// 翻转当前中英模式那份标点全角 / 半角（状态条点击、Ctrl+. 共用），写回配置并刷新状态条。
+    pub(super) fn toggle_punctuation(&mut self) {
+        let english = self.english;
+        let full_width = !self.full_width_for(english);
+        let key = if english {
+            self.config.english_full_width = full_width;
+            "english_full_width_punctuation"
+        } else {
+            self.config.full_width = full_width;
+            "full_width_punctuation"
+        };
+        tracing::debug!(english, full_width, "切换中英文标点");
+        self.persist("general", key, full_width);
+        self.reconcile_status();
     }
 
     /// 开着且青简在前台就显示，否则收起。热加载后也调一次。

@@ -17,6 +17,9 @@ impl Router {
         {
             return effect;
         }
+        if let Some(effect) = self.apply_toggle_shortcut(event) {
+            return effect;
+        }
         if event.modifiers.has_command_key() {
             return Effect::Passthrough;
         }
