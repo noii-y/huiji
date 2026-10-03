@@ -20,6 +20,11 @@ impl Router {
             self.toggle_traditional();
             return Some(Effect::Changed(None));
         }
+        // Shift+空格 切全角 / 半角字符（微软拼音）：只按 Shift，不带 Ctrl / Alt / Win。
+        if event.virtual_key == codes::SPACE && !m.ctrl && m.shift && !m.alt && !m.win {
+            self.toggle_full_width_chars();
+            return Some(Effect::Changed(None));
+        }
         None
     }
 

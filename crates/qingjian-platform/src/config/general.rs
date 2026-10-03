@@ -61,6 +61,9 @@ pub struct GeneralConfig {
 
     /// 繁体输出模式。
     pub traditional: bool,
+
+    /// 全角字符模式：组句外字母 / 数字 / 空格转全角（Shift+空格 切换）。
+    pub full_width_chars: bool,
     /// 中文模式下中英混输时中文候选总排在英文词前面。灰迹缺省开：简拼 / 手误串切不干净时
     /// （`kaif` 是“开发”打到一半）中文意图仍在，英文前缀词不该占首选；要打英文用中英切换。
     pub chinese_first: bool,
@@ -137,6 +140,7 @@ impl Default for GeneralConfig {
             preedit: PreeditMode::default(),
             english_candidates: true,
             traditional: false,
+            full_width_chars: false,
             // 灰迹默认中文优先：简拼 / 手误串常切不干净，旧默认让英文前缀词占首选（kaif→Kaifeng），
             // 中文词反而排第二。中文用户的直觉是中文在前，打英文靠中英切换，不受影响。
             chinese_first: true,

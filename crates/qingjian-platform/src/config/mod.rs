@@ -220,6 +220,8 @@ english_candidates = true
 
 # 繁体输出模式。开启后上屏繁体，不影响词库和个人词频的简体记录。
 traditional = false
+# 全角字符模式。开启后组句外的字母、数字、空格转全角，可用 Shift+空格 随时切换。
+full_width_chars = false
 # 中文模式下整段输入是英文词时（hello / key）是否让中文候选排第一、英文词第二。
 # 灰迹缺省 true：简拼 / 手误串切不干净时中文意图仍在（kaif 是“开发”打到一半），英文前缀词不该靠完整匹配占首选
 chinese_first = true

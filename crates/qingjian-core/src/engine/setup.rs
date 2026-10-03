@@ -10,6 +10,25 @@ impl Engine {
         self.full_width_punctuation = enabled;
     }
 
+    /// 设置全角字符模式（组句外的字母 / 数字 / 空格转全角）。
+    pub fn set_full_width_chars(&mut self, enabled: bool) {
+        self.full_width_chars = enabled;
+    }
+
+    /// 目前是否全角字符模式。
+    pub fn full_width_chars(&self) -> bool {
+        self.full_width_chars
+    }
+
+    /// 半角 ASCII 转全角：空格转全角空格 U+3000，`!`..`~` 平移到 U+FF01 起；其余返回 `None`。
+    pub fn to_full_width(c: char) -> Option<char> {
+        match c {
+            ' ' => Some('\u{3000}'),
+            '!'..='~' => char::from_u32(u32::from(c) + 0xFEE0),
+            _ => None,
+        }
+    }
+
     /// 原子更新自定义短语，非法规则保持旧值。
     pub fn set_custom_phrases(&mut self, phrases: Vec<crate::CustomPhrase>) -> Result<(), String> {
         crate::custom_phrase::validate_phrases(&phrases)?;

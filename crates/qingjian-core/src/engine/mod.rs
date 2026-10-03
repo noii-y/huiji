@@ -115,6 +115,9 @@ pub struct Engine {
     /// 中文标点转换开关。
     full_width_punctuation: bool,
 
+    /// 全角字符模式：组句外的字母 / 数字 / 空格转全角（Shift+空格 切换）。
+    full_width_chars: bool,
+
     /// 用户定义的固定位置文本。
     custom_phrases: Vec<crate::CustomPhrase>,
 
@@ -395,6 +398,7 @@ impl Engine {
             english_mode: false,
             punctuation: Punctuation::default(),
             full_width_punctuation: true,
+            full_width_chars: false,
             custom_phrases: Vec::new(),
             chinese_first: false,
             shift_letter_compose: false,

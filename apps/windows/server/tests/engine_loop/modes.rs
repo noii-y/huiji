@@ -390,6 +390,39 @@ fn ctrl_shift_f_toggles_traditional_output() {
     assert_eq!(press(&mut router, ctrl_f).0, KeyOutcome::Passthrough);
 }
 
+#[test]
+fn shift_space_toggles_full_width_chars() {
+    use qingjian_core::Engine;
+    // 半角 → 全角：字母、数字平移，空格转全角空格，中文不转。
+    assert_eq!(Engine::to_full_width('A'), Some('Ａ'));
+    assert_eq!(Engine::to_full_width('1'), Some('１'));
+    assert_eq!(Engine::to_full_width(' '), Some('\u{3000}'));
+    assert_eq!(Engine::to_full_width('中'), None);
+
+    let mut router = router();
+    assert!(!router.engine_mut().full_width_chars());
+    let shift_space = KeyEvent::new(0x20, None, SHIFT);
+    // 切到全角：按键吃掉、状态翻转。
+    assert_eq!(press(&mut router, shift_space).0, KeyOutcome::Consumed);
+    assert!(router.engine_mut().full_width_chars());
+    // 组句外打 a：上屏全角 ａ，不进拼音组词。
+    let (outcome, commit, _) = press(
+        &mut router,
+        KeyEvent::new(0x41, Some('a'), Default::default()),
+    );
+    assert_eq!(outcome, KeyOutcome::Consumed);
+    assert_eq!(commit, Some('ａ'.to_string()));
+    // 接着打空格：上屏全角空格 U+3000。
+    let (_, commit, _) = press(
+        &mut router,
+        KeyEvent::new(0x20, Some(' '), Default::default()),
+    );
+    assert_eq!(commit, Some('\u{3000}'.to_string()));
+    // 再按 Shift+空格 回半角。
+    press(&mut router, shift_space);
+    assert!(!router.engine_mut().full_width_chars());
+}
+
 /// 中文模式下的 Shift 大写：缺省交给应用（与以前一致），配成 compose 才收进组句缓冲区。
 #[test]
 fn shift_letters_follow_the_configuration() {

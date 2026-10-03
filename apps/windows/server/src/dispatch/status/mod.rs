@@ -120,6 +120,14 @@ impl Router {
         self.engine.set_traditional_mode(on);
     }
 
+    /// 切换全角 / 半角字符（Shift+空格，微软拼音）：立即同步给 Engine 并写回配置。
+    pub(super) fn toggle_full_width_chars(&mut self) {
+        let on = !self.engine.full_width_chars();
+        tracing::debug!(full_width_chars = on, "切换全半角字符");
+        self.persist("general", "full_width_chars", on);
+        self.engine.set_full_width_chars(on);
+    }
+
     /// 开着且青简在前台就显示，否则收起。热加载后也调一次。
     pub(super) fn reconcile_status(&mut self) {
         match self.ime_active.then_some(self.english) {

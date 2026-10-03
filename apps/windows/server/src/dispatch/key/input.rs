@@ -26,6 +26,15 @@ impl Router {
         let Some(c) = event.character.filter(|c| !c.is_control()) else {
             return self.apply_function_key(event);
         };
+        // 全角字符模式（Shift+空格 切换）：组句外的字母 / 数字 / 空格转全角上屏，不进拼音或英文组词。
+        if !self.composing()
+            && self.engine.full_width_chars()
+            && (c == ' ' || c.is_ascii_alphanumeric())
+            && let Some(wide) = qingjian_core::Engine::to_full_width(c)
+        {
+            self.engine.note_passthrough(wide);
+            return Effect::Changed(Some(wide.to_string()));
+        }
         // Caps 亮着无论中英模式都直接出大写英文；英文候选只在持久英文模式、Caps 灭、应用允许时给。
         let caps = event.modifiers.caps;
         let english = caps || event.modifiers.english_mode;

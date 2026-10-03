@@ -18,6 +18,8 @@ pub(crate) const DOWN: u32 = 0x28;
 pub(crate) const OEM_PERIOD: u32 = 0xBE;
 /// 字母 F 键：靠它识别 Ctrl+Shift+F 简繁切换。
 pub(crate) const KEY_F: u32 = 0x46;
+/// 空格键（VK_SPACE）：靠它识别 Shift+空格 全半角切换。
+pub(crate) const SPACE: u32 = 0x20;
 
 /// 小键盘减号 / 加号 VK：组句中固定为上一页 / 下一页，与配置的翻页档无关。
 pub(crate) const KEYPAD_SUBTRACT: u32 = 0x6D;
