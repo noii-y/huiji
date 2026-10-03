@@ -46,4 +46,12 @@ pub enum CliError {
 
     #[error(transparent)]
     Tune(#[from] crate::tuning::TuneError),
+
+    /// 云联想没开或没配密钥，整句翻译发不出去。
+    #[error("整句翻译不可用：需要 --predict 且配置可用的云端密钥")]
+    TranslationUnavailable,
+
+    /// 等译文超过设定时间。
+    #[error("等待整句译文超时（{0} 秒）")]
+    TranslationTimeout(u64),
 }

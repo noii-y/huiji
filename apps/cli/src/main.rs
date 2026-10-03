@@ -12,10 +12,11 @@ mod logging;
 mod repl;
 mod replay;
 mod rescoring;
+mod translate;
 mod tuning;
 
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use clap::Parser;
 use qingjian_core::{EmojiTable, Engine, FuzzyRules, Language};
@@ -102,6 +103,23 @@ fn run() -> Result<(), CliError> {
             args.eval_details.as_deref(),
         )?;
         print!("{report}");
+        return Ok(());
+    }
+    if let Some(path) = &args.translate_file {
+        translate::run_file(
+            &mut engine,
+            path,
+            Duration::from_secs(args.translate_timeout),
+            args.translate_save.as_deref(),
+        )?;
+        return Ok(());
+    }
+    if !args.translate.is_empty() {
+        translate::run(
+            &mut engine,
+            &args.translate,
+            Duration::from_secs(args.translate_timeout),
+        )?;
         return Ok(());
     }
     if args.inputs.is_empty() {

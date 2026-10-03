@@ -169,6 +169,22 @@ pub struct Args {
     #[arg(long, requires = "eval_cold")]
     pub cold_model: Option<PathBuf>,
 
+    /// 整句翻译探针：把一句中文（或外文）交给云端，逐句打印「原文 → 译文 → 耗时(ms)」；需配合 --predict 与云端密钥
+    #[arg(long, num_args = 1..)]
+    pub translate: Vec<String>,
+
+    /// 整句翻译批量评测：读 TSV（编号\t原句\t场景）或一行一句的文本，逐句翻译并输出完整表格
+    #[arg(long, conflicts_with = "translate")]
+    pub translate_file: Option<PathBuf>,
+
+    /// 把批量翻译的结果表格写到这个 TSV
+    #[arg(long, requires = "translate_file")]
+    pub translate_save: Option<PathBuf>,
+
+    /// 整句翻译每句等待译文的超时秒数（缺省 20）
+    #[arg(long, default_value_t = 20)]
+    pub translate_timeout: u64,
+
     /// 直接查询这些拼音后退出；不给则进入交互模式
     pub inputs: Vec<String>,
 }
