@@ -13,6 +13,7 @@ use super::TextService_Impl;
 use super::next::Next;
 use crate::client::KeyReply;
 use crate::com::composition::preedit_string;
+use crate::com::game_mode;
 use crate::com::key::event::{digit_key, is_edit, is_letter, is_mode_letter, is_nav, to_key_event};
 use crate::com::key::preserved;
 use crate::com::log::log;
@@ -33,6 +34,9 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
     fn OnTestKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         let vk = wparam.0 as u32;
         self.note_key_down(vk, lparam);
+        if self.in_game_mode() {
+            return Ok(FALSE);
+        }
         if self.keyboard_disabled(&pic) {
             return Ok(FALSE);
         }
@@ -42,6 +46,9 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
     fn OnKeyDown(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         let vk = wparam.0 as u32;
         self.note_key_down(vk, lparam);
+        if self.in_game_mode() {
+            return Ok(FALSE);
+        }
         if self.keyboard_disabled(&pic) {
             return Ok(FALSE);
         }
@@ -97,6 +104,18 @@ impl TextService_Impl {
             log("上下文禁用键盘（密码框），放行");
         }
         disabled
+    }
+
+    /// 全屏游戏模式：输入法让位，按键全直通游戏，不连 Server、不弹候选窗。
+    /// 进全屏前若有敲了一半的拼音，先落定，避免残留在文档里。
+    fn in_game_mode(&self) -> bool {
+        if !game_mode::active() {
+            return false;
+        }
+        if self.shared.composing() {
+            self.commit_pending();
+        }
+        true
     }
 
     fn key_event(&self, vk: u32) -> KeyEvent {

@@ -13,6 +13,7 @@ pub(crate) mod display_attribute;
 pub(crate) mod edit;
 pub(crate) mod factory;
 pub(crate) mod focus;
+pub(crate) mod game_mode;
 pub(crate) mod key;
 pub(crate) mod log;
 pub(crate) mod mode;

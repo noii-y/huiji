@@ -123,6 +123,8 @@ mod tests {
         unsafe { GetKeyboardState(&mut original_state) }.unwrap();
         // 仅修改测试线程；即使断言失败，也先恢复布局和按键状态。
         let result = std::panic::catch_unwind(|| {
+            // 本测试验证布局和按键状态，固定游戏模式为关，避免真实前台窗口影响 OnTestKeyDown。
+            crate::com::game_mode::force(Some(false));
             let service = ComObject::new(TextService::new());
             let sink: ITfKeyEventSink = service.to_interface();
             for (name, expected) in [(w!("00000409"), '+'), (w!("00000407"), '*')] {
@@ -163,6 +165,7 @@ mod tests {
         });
         unsafe { ActivateKeyboardLayout(original_layout, Default::default()) }.unwrap();
         unsafe { SetKeyboardState(&original_state) }.unwrap();
+        crate::com::game_mode::force(None);
         result.unwrap();
     }
 }
