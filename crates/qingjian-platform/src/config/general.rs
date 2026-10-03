@@ -57,8 +57,8 @@ pub struct GeneralConfig {
 
     /// 繁体输出模式。
     pub traditional: bool,
-    /// 中文模式下中英混输时中文候选总排在英文词前面。缺省关：拼音不像话的输入（`hello`）英文词排第一，
-    /// 常在中文模式里打英文词的人不受影响；想要中文永远在前的自己打开。
+    /// 中文模式下中英混输时中文候选总排在英文词前面。灰迹缺省开：简拼 / 手误串切不干净时
+    /// （`kaif` 是“开发”打到一半）中文意图仍在，英文前缀词不该占首选；要打英文用中英切换。
     pub chinese_first: bool,
 
     /// 中文模式下按住 Shift 敲的字母：交给应用（缺省）还是收进组句缓冲区参与匹配。
@@ -133,7 +133,9 @@ impl Default for GeneralConfig {
             preedit: PreeditMode::default(),
             english_candidates: true,
             traditional: false,
-            chinese_first: false,
+            // 灰迹默认中文优先：简拼 / 手误串常切不干净，旧默认让英文前缀词占首选（kaif→Kaifeng），
+            // 中文词反而排第二。中文用户的直觉是中文在前，打英文靠中英切换，不受影响。
+            chinese_first: true,
             shift_letter: ShiftLetter::default(),
             english_mode: true,
             full_width_punctuation: true,

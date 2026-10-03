@@ -82,9 +82,10 @@ pub struct Args {
     #[arg(long)]
     pub english_mode: bool,
 
-    /// 打开中文优先（配置 [general] chinese_first = true）：整段是英文词时中文候选排第一、英文第二，评测两种排法用
-    #[arg(long)]
-    pub chinese_first: bool,
+    /// 中文优先（配置 [general] chinese_first）：整段是英文词时中文候选排第一、英文第二。
+    /// 不指定时沿用配置默认（灰迹默认开）；`--chinese-first=false` 显式关，用来对照两种排法。
+    #[arg(long, num_args = 0..=1, default_missing_value = "true")]
+    pub chinese_first: Option<bool>,
 
     /// 双拼方案（xiaohe / ziranma / microsoft / sogou / abc / xiaolang / shoudao），覆盖配置里的 [general] shuangpin；off 强制全拼
     #[arg(long)]

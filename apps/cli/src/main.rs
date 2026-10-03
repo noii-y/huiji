@@ -45,7 +45,10 @@ fn run() -> Result<(), CliError> {
     let mut engine = build_engine(&args)?;
     tracing::info!(total_ms = started.elapsed().as_millis(), "Engine 就绪");
     engine.set_english_mode(args.english_mode);
-    engine.set_chinese_first(args.chinese_first);
+    // 中文优先沿用配置默认（灰迹开），只有命令行显式给了才覆盖
+    if let Some(on) = args.chinese_first {
+        engine.set_chinese_first(on);
+    }
     tuning::apply(&mut engine, &args.tune)?;
     if let Some(input) = &args.eval_cold {
         cold::run(
@@ -303,6 +306,8 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
         tracing::info!(rules = ?config.fuzzy, "模糊音已启用");
     }
     engine.set_traditional_mode(config.general.traditional);
+    // 与 windows 端一致：中文优先从配置取（灰迹默认开）
+    engine.set_chinese_first(config.general.chinese_first);
     engine.set_fuzzy(config.fuzzy);
     engine.set_mode_keys(config.shortcut.mode);
     // `--shuangpin` 现在写的是 [general] scheme（同一个维度的旧键已经并进去），off 就是全拼

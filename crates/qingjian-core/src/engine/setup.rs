@@ -402,8 +402,8 @@ impl Engine {
         self.modes
     }
 
-    /// 中英混输里中文候选是否总排在英文词前面（配置 `[general] chinese_first`，缺省关）。
-    /// 关着时拼音「不像话」的输入英文词排第一（`hello` 先英文再 荷兰咯）；开了英文词固定第二。
+    /// 中英混输里中文候选是否总排在英文词前面（配置 `[general] chinese_first`，灰迹缺省开）。
+    /// 开着时简拼 / 手误串切不干净也先给中文词，英文词固定第二；关着则不像话的输入英文排第一。
     pub fn set_chinese_first(&mut self, on: bool) {
         self.chinese_first = on;
     }
