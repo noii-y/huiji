@@ -61,11 +61,11 @@ draw.text((tx + w_cn + gap, title_y + 18), "Huiji", font=f_en, fill=AMBER)
 
 # slogan
 slogan_y = title_y + 250
-draw.text((tx, slogan_y), "把整句拼音敲完，给你整句译文", font=f_slogan, fill=LIGHT)
-draw.text((tx, slogan_y + 100), "打错了，也尽量猜对你", font=f_sub, fill=MUTED)
+draw.text((tx, slogan_y), "工作打字之余，顺便学一学外语", font=f_slogan, fill=LIGHT)
+draw.text((tx, slogan_y + 100), "不用专门腾时间，敲字就是教材", font=f_sub, fill=LIGHT)
 
 # 标签（浅色 + 深色描边，避免压在琥珀笔触上看不清）
-tags = "全在本机  ·  整句输入  ·  越用越像你  ·  Windows"
+tags = "边打边学  ·  整句译文  ·  全在本机"
 draw.text(
     (tx, slogan_y + 205),
     tags,
