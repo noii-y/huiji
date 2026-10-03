@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "lowercase")]
 pub enum ThemeMode {
     /// 跟随系统。
-    #[default]
     System,
 
     /// 始终浅色。
     Light,
 
     /// 始终深色。
+    #[default]
     Dark,
 }
 

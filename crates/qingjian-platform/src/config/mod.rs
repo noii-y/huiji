@@ -202,8 +202,8 @@ learning_language = "en"
 page_size = 5
 # 翻页键对：前一个上一页、后一个下一页。可选 "[]" 或 ",."；选 ",." 的话组句中敲逗号句号是翻页而不是上屏加标点
 page_keys = "[]"
-# 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色
-theme = "system"
+# 候选窗口外观：dark 深色（灰迹默认）/ system 跟随系统 / light 浅色
+theme = "dark"
 # 候选窗口排布：vertical 竖排 / horizontal 横排（横排只给高亮候选显示译文）
 layout = "vertical"
 # 横排时 ↑ / ↓ 把单行展开成 6 行矩阵并换行（一行一页候选），← / → 改为在候选之间移动（拼音光标用 ⌥←/→、⌘←/→），
