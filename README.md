@@ -1,18 +1,12 @@
 <p align="center">
-  <img src="huiji/assets/logo/huiji-logo.png" alt="灰迹" height="128">
+  <img src="huiji/assets/huiji-banner.png" alt="灰迹 Huiji" width="100%">
 </p>
-
-<h1 align="center">灰迹 Huiji</h1>
-
-<p align="center"><strong>把一整句拼音敲完，它给你一整句译文；打错了，也尽量猜对你。</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later">
   <img src="https://img.shields.io/badge/Windows-10%2F11-blue" alt="Windows 10/11">
   <a href="https://github.com/noii-y/huiji/stargazers"><img src="https://img.shields.io/github/stars/noii-y/huiji?label=Stars" alt="GitHub Stars"></a>
 </p>
-
-<p align="center">全在本机 &nbsp;·&nbsp; 整句输入 &nbsp;·&nbsp; 越用越像你 &nbsp;·&nbsp; Windows</p>
 
 灰迹是一款 Windows 拼音输入法，从开源输入法 [青简](https://github.com/qingjian-team/qingjian) 长出来。
 
@@ -42,9 +36,13 @@
 
 ## 灰迹多做了什么
 
+<p align="center">
+  <img src="huiji/assets/huiji-candidates.png" alt="灰迹候选窗" width="380">
+</p>
+
 **整句翻译：从「词」到「句」，全程离线**
 
-青简把译词标在单个词旁边，只到「词」这一层。灰迹让你把整句拼音敲完，候选窗顶部直接出现整句英文。比如连续敲 `nijintianwanshangyoukongma`，不用逐词选，顶部给出 `Are you free tonight?`。
+青简把译词标在单个词旁边，只到「词」这一层。灰迹让你把整句拼音敲完，候选窗顶部直接出现整句英文。比如连续敲 `nijintianwanshangyoukongma`，不用逐词选，顶部给出 `Are you free tonight?`（见上图）。
 
 翻译模型和运行时都在本机，不联网、不花钱，敲的内容不出这台电脑。模型是一个约 81 MB 的中英 Marian，已经随安装包一起装好；在 100 句测试集上，译文延迟中位数 50 毫秒。流行语还做了本地术语表，「摸鱼」译成 slack off、「内卷」译成 rat race，比直译更像人话。
 
