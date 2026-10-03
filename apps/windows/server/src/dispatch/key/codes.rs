@@ -16,6 +16,8 @@ pub(crate) const RIGHT: u32 = 0x27;
 pub(crate) const DOWN: u32 = 0x28;
 /// 主键盘句点键 `.`（VK_OEM_PERIOD）：靠它识别 Ctrl+. 这个快捷键。
 pub(crate) const OEM_PERIOD: u32 = 0xBE;
+/// 字母 F 键：靠它识别 Ctrl+Shift+F 简繁切换。
+pub(crate) const KEY_F: u32 = 0x46;
 
 /// 小键盘减号 / 加号 VK：组句中固定为上一页 / 下一页，与配置的翻页档无关。
 pub(crate) const KEYPAD_SUBTRACT: u32 = 0x6D;

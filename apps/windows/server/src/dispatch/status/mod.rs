@@ -112,6 +112,14 @@ impl Router {
         self.reconcile_status();
     }
 
+    /// 切换简体 / 繁体输出（Ctrl+Shift+F，微软拼音）：立即同步给 Engine 并写回配置。
+    pub(super) fn toggle_traditional(&mut self) {
+        let on = !self.engine.traditional_mode();
+        tracing::debug!(traditional = on, "切换简繁输出");
+        self.persist("general", "traditional", on);
+        self.engine.set_traditional_mode(on);
+    }
+
     /// 开着且青简在前台就显示，否则收起。热加载后也调一次。
     pub(super) fn reconcile_status(&mut self) {
         match self.ime_active.then_some(self.english) {

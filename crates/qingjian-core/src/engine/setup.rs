@@ -100,6 +100,11 @@ impl Engine {
         }
     }
 
+    /// 目前是否繁體輸出。
+    pub fn traditional_mode(&self) -> bool {
+        self.traditional
+    }
+
     /// 目前是否處於注音模式。
     pub fn is_zhuyin_mode(&self) -> bool {
         self.zhuyin

@@ -15,6 +15,11 @@ impl Router {
             self.toggle_punctuation();
             return Some(Effect::Changed(None));
         }
+        // Ctrl+Shift+F 切简繁（微软拼音）：Ctrl 加 Shift，不带 Alt / Win。
+        if event.virtual_key == codes::KEY_F && m.ctrl && m.shift && !m.alt && !m.win {
+            self.toggle_traditional();
+            return Some(Effect::Changed(None));
+        }
         None
     }
 

@@ -354,6 +354,42 @@ fn ctrl_period_toggles_chinese_punctuation() {
     );
 }
 
+#[test]
+fn ctrl_shift_f_toggles_traditional_output() {
+    let mut router = router();
+    assert!(!router.engine_mut().traditional_mode());
+    let ctrl_shift_f = KeyEvent::new(
+        0x46,
+        None,
+        KeyModifiers {
+            ctrl: true,
+            shift: true,
+            ..Default::default()
+        },
+    );
+    // 切到繁体：按键被吃掉、engine 状态翻转。
+    assert_eq!(press(&mut router, ctrl_shift_f).0, KeyOutcome::Consumed);
+    assert!(router.engine_mut().traditional_mode());
+    // 打 guo：候选里的「国」应转成繁體「國」。
+    let (_, _, frame) = type_letters(&mut router, "guo");
+    assert!(
+        frame.candidates.items.iter().any(|c| c.text.contains('國')),
+        "繁体模式下候选应含「國」：{:?}",
+        frame
+            .candidates
+            .items
+            .iter()
+            .map(|c| &c.text)
+            .collect::<Vec<_>>()
+    );
+    // 再按一次回简体。
+    press(&mut router, ctrl_shift_f);
+    assert!(!router.engine_mut().traditional_mode());
+    // 只按 Ctrl+F（没有 Shift）不算简繁快捷键，照常放行。
+    let ctrl_f = KeyEvent::new(0x46, None, CTRL);
+    assert_eq!(press(&mut router, ctrl_f).0, KeyOutcome::Passthrough);
+}
+
 /// 中文模式下的 Shift 大写：缺省交给应用（与以前一致），配成 compose 才收进组句缓冲区。
 #[test]
 fn shift_letters_follow_the_configuration() {
