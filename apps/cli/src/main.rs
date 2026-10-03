@@ -25,6 +25,8 @@ use qingjian_learning::FrequencyLearner;
 use qingjian_lm::BigramModel;
 use qingjian_platform::{Config, Scheme};
 use qingjian_predict::CloudPredictor;
+#[cfg(feature = "local-nmt")]
+use qingjian_predict::LocalTranslator;
 use qingjian_translate::Glossary;
 
 use crate::args::Args;
@@ -368,7 +370,19 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
         // CLI 没有配置开关：给了码表即开辅码（缺省关），replay 统计不哑
         engine.set_aux_enabled(true);
     }
-    if config.predict.enabled {
+    if let Some(model_dir) = &args.local_nmt {
+        // 端侧优先：给了本地模型就离线翻译，不碰云端
+        #[cfg(feature = "local-nmt")]
+        {
+            let predictor = LocalTranslator::new(model_dir.clone())?;
+            engine = engine.with_predictor(Box::new(predictor));
+        }
+        #[cfg(not(feature = "local-nmt"))]
+        {
+            let _ = model_dir;
+            return Err(CliError::LocalNmtNotCompiled);
+        }
+    } else if config.predict.enabled {
         let predictor = CloudPredictor::new(&config.predict)?;
         engine = engine.with_predictor(Box::new(predictor));
     }

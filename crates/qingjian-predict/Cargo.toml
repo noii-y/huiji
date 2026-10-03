@@ -19,3 +19,12 @@ tokio.workspace = true
 tracing.workspace = true
 reqwest.workspace = true
 uuid.workspace = true
+
+# 本地神经翻译：ct2rs 绑定 CTranslate2，只在开 feature 时编译，默认 Ruy 后端、CPU int8
+ct2rs = { version = "0.10", optional = true, default-features = false, features = ["sentencepiece", "ruy"] }
+
+[features]
+# 端侧整句翻译：离线、免费、数据不出本机
+local-nmt = ["dep:ct2rs"]
+# 满血后端：预编译 oneMKL，x86 上更快，运行时更大
+local-nmt-mkl = ["dep:ct2rs", "ct2rs/mkl"]

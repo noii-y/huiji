@@ -12,6 +12,8 @@ mod config;
 mod connection;
 mod error;
 mod gloss;
+#[cfg(any(feature = "local-nmt", feature = "local-nmt-mkl"))]
+mod local_translator;
 mod prompt;
 mod worker;
 
@@ -20,3 +22,5 @@ pub use config::PredictConfig;
 pub use connection::{ConnectionReport, ConnectionTest};
 pub use error::PredictError;
 pub use gloss::CloudGlossFiller;
+#[cfg(any(feature = "local-nmt", feature = "local-nmt-mkl"))]
+pub use local_translator::{LocalTranslateError, LocalTranslator};

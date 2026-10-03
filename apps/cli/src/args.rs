@@ -185,6 +185,11 @@ pub struct Args {
     #[arg(long, default_value_t = 20)]
     pub translate_timeout: u64,
 
+    /// 端侧整句翻译模型目录（含 model.bin、source.spm、target.spm），离线翻译、数据不出本机；
+    /// 需以 --features local-nmt 编译。给了就用本地模型，不走云端
+    #[arg(long, conflicts_with = "predict")]
+    pub local_nmt: Option<PathBuf>,
+
     /// 直接查询这些拼音后退出；不给则进入交互模式
     pub inputs: Vec<String>,
 }
