@@ -26,8 +26,8 @@
 #endif
 #define AppName "灰迹"
 #define Publisher "灰迹"
-; 灰迹暂无独立官网，临时指向 noii-y 的开发仓库；独立地址定了再换。
-#define WebsiteUrl "https://github.com/noii-y/qingjian"
+; 灰迹以 GitHub 仓库为项目主页（暂无独立官网）。
+#define WebsiteUrl "https://github.com/noii-y/huiji"
 ; 脚本相对仓库根（ime/）：installer → windows → apps → ime
 #define Repo "..\..\.."
 ; 按版本起名的 TSF DLL（见文件头「升级」）。

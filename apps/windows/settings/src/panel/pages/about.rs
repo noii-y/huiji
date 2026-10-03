@@ -10,9 +10,9 @@ use crate::panel::{Message, Settings};
 /// QINGJIAN_VERSION 由 build.rs 给：-dev 版接 git 短哈希。
 pub(crate) const VERSION: &str = env!("QINGJIAN_VERSION");
 
-pub(crate) const WEBSITE_URL: &str = "https://qingjian.app";
+pub(crate) const WEBSITE_URL: &str = "https://github.com/noii-y/huiji";
 
-pub(crate) const REPOSITORY_URL: &str = "https://github.com/qingjian-team";
+pub(crate) const REPOSITORY_URL: &str = "https://github.com/noii-y/huiji";
 
 /// 与仓库根 `LICENSE` 一致。
 const LICENSE_NOTE: &str = "自由软件，GPL-3.0-or-later 许可证：可以自由使用、修改与再分发，修改后分发须同样开源。官方渠道免费。";
