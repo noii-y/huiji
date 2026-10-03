@@ -92,7 +92,8 @@ fn run(job_rx: Receiver<Job>, result_tx: Sender<Prediction>, translator: Transla
             Ok(batch) if !batch.is_empty() => Prediction {
                 sequence,
                 words: Vec::new(),
-                sentence: Some(batch[0].0.clone()),
+                // 流行语字面硬译的后处理兜底（摸鱼、内卷等）
+                sentence: Some(crate::terminology::apply(&batch[0].0)),
             },
             // 空结果或出错也回一条，让壳别一直等
             Ok(_) => Prediction {

@@ -19,6 +19,7 @@ mod gloss;
 ))]
 mod local_translator;
 mod prompt;
+mod terminology;
 mod worker;
 
 pub use cloud_predictor::CloudPredictor;
@@ -32,3 +33,4 @@ pub use gloss::CloudGlossFiller;
     feature = "local-nmt-system"
 ))]
 pub use local_translator::{LocalTranslateError, LocalTranslator};
+pub use terminology::apply as apply_terminology;

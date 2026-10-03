@@ -69,6 +69,8 @@ async-openai = { version = "0.42.0", default-features = false, features = ["chat
 reqwest = { version = "0.13", default-features = false }
 uuid = { version = "1.26", features = ["v4"] }
 tokio = { version = "1.53.1", features = ["rt", "time"] }
+# 术语表后处理的模式匹配
+regex = "1.11"
 
 # 检查更新：releases.json 的 ed25519 签名（发版时 tools/release-sign 签，客户端验）
 ed25519-dalek = "3.0.0"

@@ -3047,6 +3047,7 @@ dependencies = [
  "async-openai",
  "ct2rs",
  "qingjian-core",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
