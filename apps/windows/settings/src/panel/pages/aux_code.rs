@@ -162,7 +162,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                     .on_click(context.message(Message::ImportCodeTable))
                     .content("导入码表…"),
                 note(
-                    "接受 Rime 的 .dict.yaml（要有词、码两列）与现成的 .qj。码表由你自己取得，青简不随包分发第三方形码表。",
+                    "接受 Rime 的 .dict.yaml（要有词、码两列）与现成的 .qj。码表由你自己取得，灰迹不随包分发第三方形码表。",
                 ),
             )),
         note(

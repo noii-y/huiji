@@ -38,7 +38,7 @@ impl ITfLangBarItem_Impl for ModeButton_Impl {
         info.guidItem = GUID_LBI_INPUTMODE;
         info.dwStyle = TF_LBI_STYLE_BTN_BUTTON;
         info.ulSort = 0;
-        let desc: Vec<u16> = "青简中英模式".encode_utf16().collect();
+        let desc: Vec<u16> = "灰迹中英模式".encode_utf16().collect();
         let n = desc.len().min(info.szDescription.len());
         info.szDescription[..n].copy_from_slice(&desc[..n]);
         Ok(())

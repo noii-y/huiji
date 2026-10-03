@@ -49,7 +49,7 @@ fn switch_mode_key() -> TF_PRESERVEDKEY {
 
 /// 登记 Ctrl + Alt + Space 为中英切换保留键（`switch_mode` 勾了它时）。
 pub(crate) fn register_switch_mode(keystroke: &ITfKeystrokeMgr, tid: u32) -> Result<()> {
-    let description: Vec<u16> = "切换中英文（青简）".encode_utf16().collect();
+    let description: Vec<u16> = "切换中英文（灰迹）".encode_utf16().collect();
     unsafe { keystroke.PreserveKey(tid, &GUID_SWITCH_MODE, &switch_mode_key(), &description) }
 }
 

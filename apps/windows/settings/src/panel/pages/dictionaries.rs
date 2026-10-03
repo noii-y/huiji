@@ -104,7 +104,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 Button::new()
                     .on_click(context.message(Message::ImportDictionary))
                     .content("导入词库…"),
-                note("接受青简 TSV、Rime .dict.yaml 与现成的 .qj；导入即转换进上面的目录，同名覆盖。"),
+                note("接受 TSV、Rime .dict.yaml 与现成的 .qj；导入即转换进上面的目录，同名覆盖。"),
             )),
         note(&settings.dictionary_status),
     ]);

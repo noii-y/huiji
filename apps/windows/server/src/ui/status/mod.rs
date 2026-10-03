@@ -100,7 +100,7 @@ impl StatusBar {
             CreateWindowExW(
                 WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
                 CLASS_NAME,
-                w!("青简状态条"),
+                w!("灰迹状态条"),
                 WS_POPUP,
                 0,
                 0,

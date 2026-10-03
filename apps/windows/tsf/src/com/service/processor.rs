@@ -81,7 +81,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
             log("配置关掉了内置英文模式：不登记中 / 英按钮，固定中文模式");
         }
         ACTIVE.with(|active| *active.borrow_mut() = Some(self.to_object()));
-        log(&format!("青简 TSF 已激活 tid={tid}"));
+        log(&format!("灰迹 TSF 已激活 tid={tid}"));
         Ok(())
     }
 
@@ -111,7 +111,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
         self.shared.reset();
         self.shared.take_server_stale();
         self.shared.set_foreground(false);
-        log("青简 TSF 已停用");
+        log("灰迹 TSF 已停用");
         Ok(())
     }
 }

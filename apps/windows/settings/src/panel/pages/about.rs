@@ -47,7 +47,7 @@ const ATTRIBUTIONS: &[(&str, &str)] = &[
     ),
 ];
 
-const PRIVACY_NOTE: &str = "青简不上传任何数据。开着「自动检查更新」时每天向官网读一次版本列表，请求不带任何标识，上面可以关。开着云联想时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在本机，可以关掉或清空。";
+const PRIVACY_NOTE: &str = "灰迹不上传任何数据。开着「自动检查更新」时每天向官网读一次版本列表，请求不带任何标识，上面可以关。开着云联想时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在本机，可以关掉或清空。";
 
 const FEEDBACK_NOTE: &str = "遇到问题点「打包日志到桌面」，把生成的 zip 发给作者即可（含三个进程的日志与配置文件，不含密钥）。缺省日志不含你敲的内容；排查排序问题时作者可能请你在「高级」页临时打开详细日志。";
 
@@ -90,7 +90,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
     }
     let body = StackPanel::new().spacing(12.0).children([
         TextBlock::new()
-            .text(format!("青简 Windows {VERSION}"))
+            .text(format!("灰迹 Windows {VERSION}"))
             .font_size(16.0)
             .font_weight(FontWeight::SEMI_BOLD)
             .into(),
@@ -99,6 +99,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             "构建 {}",
             option_env!("QINGJIAN_BUILD").unwrap_or("本地构建")
         )),
+        note("灰迹基于开源的青简输入法（GPL-3.0-or-later）开发，向青简作者与社区致谢。"),
         StackPanel::new()
             .orientation(Orientation::Horizontal)
             .spacing(12.0)

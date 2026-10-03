@@ -46,7 +46,7 @@ impl Painter {
         tracing::info!(
             elapsed = ?started.elapsed(),
             font = library.ui_family(),
-            "候选窗口与状态条使用青简渲染器"
+            "候选窗口与状态条使用灰迹渲染器"
         );
         Some(Self {
             renderer: Renderer::new(library),
