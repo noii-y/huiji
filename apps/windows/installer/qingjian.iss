@@ -24,14 +24,18 @@
 #ifndef AppVersionNumeric
   #define AppVersionNumeric AppVersion
 #endif
-#define AppName "青简"
-#define Publisher "青简"
-#define WebsiteUrl "https://qingjian.im"
+#define AppName "灰迹"
+#define Publisher "灰迹"
+; 灰迹暂无独立官网，临时指向 noii-y 的开发仓库；独立地址定了再换。
+#define WebsiteUrl "https://github.com/noii-y/qingjian"
 ; 脚本相对仓库根（ime/）：installer → windows → apps → ime
 #define Repo "..\..\.."
 ; 按版本起名的 TSF DLL（见文件头「升级」）。
 #define TsfDll "qingjian_tsf-" + AppVersion + ".dll"
 #define TsfDll32 "qingjian_tsf-" + AppVersion + "-x86.dll"
+; 端侧整句翻译：CT2 运行时两个 dll 与 Marian 模型的本机来源。必须 ASCII 路径，中文路径 SentencePiece 打不开。
+#define SdkBin "C:\Users\dril\AppData\Local\HuijiSDK\ct2\bin"
+#define ModelSource "C:\Users\dril\AppData\Roaming\Qingjian\models\opus-mt-zh-en-ct2"
 
 [Setup]
 AppId={{A7E3C1F2-5B94-4D6A-9C0E-2F8B1D3A6E70}
@@ -51,7 +55,7 @@ PrivilegesRequired=admin
 ; 别让 Restart Manager 去关所有加载了 DLL 的应用（那是每一个有文本框的应用）。
 CloseApplications=no
 OutputDir={#Repo}\target\installer
-OutputBaseFilename=qingjian-{#AppVersion}-windows-x86_64-setup
+OutputBaseFilename=huiji-{#AppVersion}-windows-x86_64-setup
 SetupIconFile={#Repo}\apps\windows\tsf\resources\qingjian.ico
 UninstallDisplayIcon={app}\qingjian.ico
 Compression=lzma2
@@ -64,7 +68,7 @@ Name: "chs"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 [Messages]
 ; 完成页：DLL 会装进每个应用进程，装之前就开着的应用要用新版必须重启（见文件头「升级」）。
 ; 这是最容易被误解成「设置/新版没生效」的一点，所以放在完成页明说。
-FinishedLabel=安装完成。请注销后重新登录（或重启电脑），青简才会在所有应用里生效。%n%n不方便注销的话，先关掉再重新打开要打字的应用也可以。
+FinishedLabel=安装完成。请注销后重新登录（或重启电脑），灰迹才会在所有应用里生效。%n%n不方便注销的话，先关掉再重新打开要打字的应用也可以。
 
 [Files]
 ; —— 二进制 ——
@@ -102,18 +106,22 @@ Source: "{#Repo}\assets\levels\levels-ja.tsv";   DestDir: "{app}\assets\levels";
 ; 开发布局（cargo run）也对得上
 Source: "{#Repo}\assets\wubi\wubi86.tsv";        DestDir: "{app}\assets\wubi";   Flags: ignoreversion
 Source: "{#Repo}\assets\sample\dict.tsv";        DestDir: "{app}\assets\sample"; Flags: ignoreversion
+; —— 端侧整句翻译：两个运行时 dll 放 Server 同目录，模型装 data\models（find_translation_model 的候选之一）——
+Source: "{#SdkBin}\ctranslate2.dll";   DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SdkBin}\libiomp5md.dll";     DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ModelSource}\*"; DestDir: "{app}\data\models\opus-mt-zh-en-ct2"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; —— Server 放最后：它一落地，旧版 DLL 就能把它拉起来并占住数据文件（见文件头）——
 Source: "{#Repo}\target\release\qingjian-server.exe";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\青简设置"; Filename: "{app}\qingjian-settings.exe"; IconFilename: "{app}\qingjian.ico"
-Name: "{group}\卸载青简"; Filename: "{uninstallexe}"
+Name: "{group}\灰迹设置"; Filename: "{app}\qingjian-settings.exe"; IconFilename: "{app}\qingjian.ico"
+Name: "{group}\卸载灰迹"; Filename: "{uninstallexe}"
 ; 登录自启：登录时 Explorer 走 ShellExecute 拉起本快捷方式 → AppInfo 授予 uiAccess，候选窗才能盖过商店 / 任务栏搜索。
 ; 用 {commonstartup}（所有用户「启动」文件夹）而非 {userstartup}：本安装器是 admin 机器级安装，
 ; admin 模式下写每用户区会落到「谁提权就写谁」的 profile（Inno 会告警且可能不是目标用户）；
 ; 机器级「启动」项对每个登录用户都在其会话里由该用户的 Explorer 拉起，仍是 per-user 运行、仍授予 uiAccess。
 ; （计划任务直接拉起拿不到 uiAccess，故不用 schtasks。）
-Name: "{commonstartup}\青简 Server"; Filename: "{app}\qingjian-server.exe"; WorkingDir: "{app}"; IconFilename: "{app}\qingjian.ico"
+Name: "{commonstartup}\灰迹 Server"; Filename: "{app}\qingjian-server.exe"; WorkingDir: "{app}"; IconFilename: "{app}\qingjian.ico"
 
 [Run]
 ; ① UWP/AppContainer 应用要能读安装目录才能加载 DLL（*S-1-15-2-1 = ALL APPLICATION PACKAGES，按 SID 与语言无关）。

@@ -20,7 +20,7 @@
 [CmdletBinding()]
 param([switch]$SkipBuild, [switch]$Sign)
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'  # cargo 等原生命令的 warning 走 stderr，Stop 会把它误判成致命错误；真实失败靠下面每步的显式判断与 throw 兜底
 
 # 仓库根：本脚本在 apps\windows\installer 下，往上三层是 ime\。
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
@@ -39,8 +39,14 @@ if (-not $SkipBuild) {
     Write-Host '构建 release 产物…' -ForegroundColor Cyan
     Push-Location $Repo
     try {
-        cargo build --release --locked -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings
+        cargo build --release --locked -p qingjian-windows-tsf -p qingjian-windows-settings
         if ($LASTEXITCODE -ne 0) { throw "cargo build 失败（退出码 $LASTEXITCODE）" }
+        # Server 带端侧整句翻译：local-nmt-system 链接本机预编译 CT2 dll，LIBRARY_PATH 指向 .lib 目录。
+        $sdkLib = Join-Path $env:LOCALAPPDATA 'HuijiSDK\ct2\lib'
+        if (-not (Test-Path (Join-Path $sdkLib 'ctranslate2.lib'))) { throw "端侧翻译 SDK 不在：$sdkLib" }
+        $env:LIBRARY_PATH = $sdkLib
+        cargo build --release --locked -p qingjian-windows-server --features local-nmt-system
+        if ($LASTEXITCODE -ne 0) { throw "Server cargo build 失败（退出码 $LASTEXITCODE）" }
         cargo build --release --locked -p qingjian-windows-tsf --target i686-pc-windows-msvc
         if ($LASTEXITCODE -ne 0) { throw "32 位 DLL cargo build 失败（退出码 $LASTEXITCODE）" }
     } finally { Pop-Location }
