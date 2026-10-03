@@ -63,7 +63,7 @@ impl Theme {
             padding: 8.0,
             row_padding: 4.0,
             column_gap: 8.0,
-            corner_radius: 8.0,
+            corner_radius: 10.0,
             max_rows: 9,
             text_gamma,
         }

@@ -1,4 +1,4 @@
-//! 一套配色。缺省两套取自 macOS 系统语义色在 sRGB 下的实测值（label 0.847、secondaryLabel 0.498…）。
+//! 一套配色（灰迹「石墨」主题）：深色石墨底配暖琥珀，浅色暖灰纸配低饱和赭石。
 
 use crate::color::Color;
 
@@ -19,7 +19,7 @@ pub struct Palette {
     /// 序号。
     pub index: Color,
 
-    /// 云联想的云朵与文字：比译文醒目一点，但不抢候选词。
+    /// 云联想的云朵与文字。
     pub cloud: Color,
 
     /// 窗口背景。
@@ -27,32 +27,37 @@ pub struct Palette {
 
     /// 当前候选的高亮底色。
     pub highlight: Color,
+
+    /// 首选左侧的强调竖条。
+    pub accent: Color,
 }
 
 impl Palette {
     pub const fn light() -> Self {
         Self {
-            text: Color::gray(0, 216),
-            gloss: Color::gray(0, 127),
-            pos: Color::gray(0, 66),
-            fresh: Color::rgb(255, 141, 40),
-            index: Color::gray(0, 66),
-            cloud: Color::rgb(0, 195, 208),
-            background: Color::rgb(255, 255, 255),
-            highlight: Color::rgba(176, 206, 125, 127),
+            text: Color::rgb(0x23, 0x22, 0x24),
+            gloss: Color::rgb(0x9a, 0x6e, 0x3c),
+            pos: Color::rgb(0x9c, 0x98, 0x92),
+            fresh: Color::rgb(0xb0, 0x7e, 0x44),
+            index: Color::rgb(0xa6, 0xa2, 0x9c),
+            cloud: Color::rgb(0x9a, 0x6e, 0x3c),
+            background: Color::rgb(0xf6, 0xf5, 0xf4),
+            highlight: Color::rgb(0xe9, 0xe7, 0xe4),
+            accent: Color::rgb(0xb0, 0x82, 0x4e),
         }
     }
 
     pub const fn dark() -> Self {
         Self {
-            text: Color::gray(255, 216),
-            gloss: Color::gray(255, 140),
-            pos: Color::gray(255, 63),
-            fresh: Color::rgb(255, 146, 48),
-            index: Color::gray(255, 63),
-            cloud: Color::rgb(0, 210, 224),
-            background: Color::rgb(30, 30, 30),
-            highlight: Color::rgba(36, 76, 36, 255),
+            text: Color::rgb(0xe8, 0xe8, 0xea),
+            gloss: Color::rgb(0xcd, 0x9e, 0x68),
+            pos: Color::rgb(0x8a, 0x8a, 0x90),
+            fresh: Color::rgb(0xd2, 0xa2, 0x6a),
+            index: Color::rgb(0x7a, 0x7a, 0x80),
+            cloud: Color::rgb(0xcd, 0x9e, 0x68),
+            background: Color::rgb(0x22, 0x22, 0x25),
+            highlight: Color::rgb(0x30, 0x30, 0x34),
+            accent: Color::rgb(0xcd, 0x9e, 0x68),
         }
     }
 }

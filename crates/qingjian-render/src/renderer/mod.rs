@@ -248,6 +248,7 @@ impl Renderer {
     }
 
     /// 候选词本体：云端词前带云朵、换颜色。
+    #[allow(clippy::too_many_arguments)]
     fn draw_word(
         &mut self,
         canvas: &mut Canvas,
@@ -256,6 +257,7 @@ impl Renderer {
         x: f32,
         top: f32,
         text_height: f32,
+        bold: bool,
     ) {
         let mut word_x = x;
         if row.cloud {
@@ -266,7 +268,10 @@ impl Renderer {
         } else {
             m.theme.colors.text
         };
-        let style = m.style(m.theme.text_font, color);
+        let mut style = m.style(m.theme.text_font, color);
+        if bold {
+            style = style.bold();
+        }
         word_x += self.draw_text(canvas, &row.text, &style, word_x, top);
         if let Some(code) = &row.code {
             let style = m.annotation_style(m.tone_color(Tone::Code));
@@ -303,8 +308,31 @@ impl Renderer {
             y,
             width,
             height,
-            m.corner_radius() / 2.0,
+            m.corner_radius(),
             m.theme.colors.highlight,
+        );
+    }
+
+    /// 首选词左侧的强调竖条：高约行高的七分之四、垂直居中，胶囊形。`word_x` 是候选词左边界。
+    fn draw_accent_bar(
+        &mut self,
+        canvas: &mut Canvas,
+        m: &Metrics,
+        word_x: f32,
+        top: f32,
+        height: f32,
+    ) {
+        let bar_w = (m.padding() / 3.0).max(2.0);
+        let bar_h = height * 4.0 / 7.0;
+        let bar_top = top + (height - bar_h) / 2.0;
+        let left = word_x - bar_w - m.column_gap() / 3.0;
+        canvas.fill_round_rect(
+            left,
+            bar_top,
+            bar_w,
+            bar_h,
+            bar_w / 2.0,
+            m.theme.colors.accent,
         );
     }
 }

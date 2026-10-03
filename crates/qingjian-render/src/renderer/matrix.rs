@@ -93,6 +93,8 @@ impl Renderer {
                     cell_width + inset * 2.0,
                     cells.row_height,
                 );
+                let word_x = x + cells.index_width + m.px(INDEX_GAP);
+                self.draw_accent_bar(canvas, m, word_x, row_y, cells.row_height);
             }
             if !row.index.is_empty() {
                 self.draw_text(
@@ -112,6 +114,7 @@ impl Renderer {
                 x + cells.index_width + m.px(INDEX_GAP),
                 top,
                 text_height,
+                Some(i) == frame.highlighted,
             );
         }
         // 信息行：页码靠右；左边先放被截断的高亮候选的完整文本，再放译文，放不下的截断

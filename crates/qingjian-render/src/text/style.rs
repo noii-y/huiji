@@ -1,5 +1,7 @@
 //! 一段文字怎么画：字号、行高（像素）、颜色、删除线。
 
+use cosmic_text::Weight;
+
 use crate::color::Color;
 use crate::theme::FontSpec;
 
@@ -24,6 +26,9 @@ pub(crate) struct TextStyle {
 
     /// 覆盖率 gamma，见 `Theme::text_gamma`。
     pub gamma: f32,
+
+    /// 字重：首选候选加粗，其余常规。
+    pub weight: Weight,
 }
 
 impl TextStyle {
@@ -37,6 +42,7 @@ impl TextStyle {
             strike: false,
             underline: false,
             gamma,
+            weight: Weight::NORMAL,
         }
     }
 
@@ -47,6 +53,12 @@ impl TextStyle {
 
     pub(crate) fn underlined(mut self) -> Self {
         self.underline = true;
+        self
+    }
+
+    /// 首选词加粗。
+    pub(crate) fn bold(mut self) -> Self {
+        self.weight = Weight::BOLD;
         self
     }
 }

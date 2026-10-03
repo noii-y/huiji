@@ -156,7 +156,8 @@ impl TextPainter {
     fn shape(&mut self, text: &str, style: &TextStyle) {
         let attrs = Attrs::new()
             .family(UI_FAMILY)
-            .color(style.color.to_cosmic());
+            .color(style.color.to_cosmic())
+            .weight(style.weight);
         self.buffer
             .set_metrics(Metrics::new(style.size, style.line_height));
         self.buffer.set_size(None, None);

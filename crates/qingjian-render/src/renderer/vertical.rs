@@ -75,6 +75,7 @@ impl Renderer {
                     content_width - m.padding(),
                     columns.row_height,
                 );
+                self.draw_accent_bar(canvas, m, text_x, y, columns.row_height);
             }
             let top = y + m.row_padding();
             let small_offset = m.small_offset(text_height);
@@ -85,7 +86,15 @@ impl Renderer {
                 left + m.padding(),
                 top + small_offset,
             );
-            self.draw_word(canvas, m, row, text_x, top, text_height);
+            self.draw_word(
+                canvas,
+                m,
+                row,
+                text_x,
+                top,
+                text_height,
+                Some(i) == frame.highlighted,
+            );
             let mut x = annotation_x;
             for (segment, tone) in &row.annotation {
                 let style = m.annotation_style(m.tone_color(*tone));

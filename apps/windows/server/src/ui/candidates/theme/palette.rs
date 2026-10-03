@@ -1,4 +1,4 @@
-//! 浅色 / 深色配色。
+//! 浅色 / 深色配色（灰迹「石墨」主题）。
 
 use windows::Win32::Foundation::COLORREF;
 
@@ -14,36 +14,38 @@ pub(super) struct Palette {
     pub(super) cloud_color: COLORREF,
     pub(super) background: COLORREF,
     pub(super) highlight: COLORREF,
+    /// 首选左侧的强调竖条。
+    pub(super) accent: COLORREF,
 }
 
 impl Palette {
-    /// 贴近 mac light：label / secondary / tertiary label、systemOrange、systemTeal。
+    /// 浅色：暖灰纸面，强调色用低饱和赭石。
     pub(super) fn light() -> Self {
         Self {
-            text_color: rgb(0x1d, 0x1d, 0x1f),
-            gloss_color: rgb(0x6b, 0x6b, 0x70),
-            pos_color: rgb(0xa0, 0xa0, 0xa6),
-            fresh_color: rgb(0xff, 0x95, 0x00),
-            index_color: rgb(0xa0, 0xa0, 0xa6),
-            cloud_color: rgb(0x30, 0xb0, 0xc7),
-            background: rgb(0xf8, 0xf8, 0xf8),
-            // sRGB(0,0.48,1.0) @16% 叠在浅背景上。
-            highlight: rgb(0xcf, 0xe4, 0xf9),
+            text_color: rgb(0x23, 0x22, 0x24),
+            gloss_color: rgb(0x9a, 0x6e, 0x3c),
+            pos_color: rgb(0x9c, 0x98, 0x92),
+            fresh_color: rgb(0xb0, 0x7e, 0x44),
+            index_color: rgb(0xa6, 0xa2, 0x9c),
+            cloud_color: rgb(0x9a, 0x6e, 0x3c),
+            background: rgb(0xf6, 0xf5, 0xf4),
+            highlight: rgb(0xe9, 0xe7, 0xe4),
+            accent: rgb(0xb0, 0x82, 0x4e),
         }
     }
 
-    /// 贴近 mac dark。
+    /// 深色：石墨底，强调色用暖琥珀。
     pub(super) fn dark() -> Self {
         Self {
-            text_color: rgb(0xf5, 0xf5, 0xf7),
-            gloss_color: rgb(0xae, 0xae, 0xb2),
-            pos_color: rgb(0x8e, 0x8e, 0x93),
-            fresh_color: rgb(0xff, 0x9f, 0x0a),
-            index_color: rgb(0x8e, 0x8e, 0x93),
-            cloud_color: rgb(0x40, 0xc8, 0xe0),
-            background: rgb(0x2a, 0x2a, 0x2c),
-            // 深背景上按约 28% 预混才够醒目。
-            highlight: rgb(0x2f, 0x4d, 0x72),
+            text_color: rgb(0xe8, 0xe8, 0xea),
+            gloss_color: rgb(0xcd, 0x9e, 0x68),
+            pos_color: rgb(0x8a, 0x8a, 0x90),
+            fresh_color: rgb(0xd2, 0xa2, 0x6a),
+            index_color: rgb(0x7a, 0x7a, 0x80),
+            cloud_color: rgb(0xcd, 0x9e, 0x68),
+            background: rgb(0x22, 0x22, 0x25),
+            highlight: rgb(0x30, 0x30, 0x34),
+            accent: rgb(0xcd, 0x9e, 0x68),
         }
     }
 }

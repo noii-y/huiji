@@ -232,7 +232,8 @@ fn draw_rows(hdc: HDC, data: &RenderData, mut y: i32, width: i32) {
                 right: width - theme.padding / 2,
                 bottom: y + columns.row_height,
             };
-            fill_round_rect(hdc, rect, theme.highlight, theme.corner_radius / 2);
+            fill_round_rect(hdc, rect, theme.highlight, theme.corner_radius);
+            draw_accent_bar(hdc, theme, text_x, y, y + columns.row_height);
         }
         let baseline = y + theme.row_padding;
         let text_size = measure(hdc, theme.text_font, &row.text);
@@ -245,7 +246,15 @@ fn draw_rows(hdc: HDC, data: &RenderData, mut y: i32, width: i32) {
             baseline + small_offset,
             &row.index,
         );
-        draw_word(hdc, theme, row, text_x, baseline, small_offset);
+        draw_word(
+            hdc,
+            theme,
+            row,
+            text_x,
+            baseline,
+            small_offset,
+            i == data.highlight,
+        );
         let mut x = annotation_x;
         for (segment, tone) in &row.annotation {
             x += draw_text(
@@ -302,7 +311,9 @@ fn draw_horizontal(hdc: HDC, data: &RenderData, y: i32, width: i32) {
                 right: x + item_width + highlight_inset,
                 bottom: y + row_height,
             };
-            fill_round_rect(hdc, rect, theme.highlight, theme.corner_radius / 2);
+            fill_round_rect(hdc, rect, theme.highlight, theme.corner_radius);
+            let word_x = x + index_width + index_gap;
+            draw_accent_bar(hdc, theme, word_x, y, y + row_height);
         }
         let small_offset = small_offset(hdc, theme, text_size.cy);
         draw_text(
@@ -320,6 +331,7 @@ fn draw_horizontal(hdc: HDC, data: &RenderData, y: i32, width: i32) {
             x + index_width + index_gap,
             baseline,
             small_offset,
+            i == data.highlight,
         );
         x += item_width + theme.column_gap;
     }
@@ -423,7 +435,20 @@ fn code_width(hdc: HDC, theme: &Theme, row: &Row) -> i32 {
 }
 
 /// 画候选词本体，云端词前带小云朵、后面紧跟辅码。返回占用宽度。
-fn draw_word(hdc: HDC, theme: &Theme, row: &Row, x: i32, baseline: i32, small_offset: i32) -> i32 {
+fn draw_word(
+    hdc: HDC,
+    theme: &Theme,
+    row: &Row,
+    x: i32,
+    baseline: i32,
+    small_offset: i32,
+    bold: bool,
+) -> i32 {
+    let text_font = if bold {
+        theme.text_bold_font
+    } else {
+        theme.text_font
+    };
     let prefix = cloud_prefix_width(hdc, theme, row);
     let color = if row.cloud {
         draw_text(
@@ -438,8 +463,7 @@ fn draw_word(hdc: HDC, theme: &Theme, row: &Row, x: i32, baseline: i32, small_of
     } else {
         theme.text_color
     };
-    let mut width =
-        prefix + draw_text(hdc, theme.text_font, color, x + prefix, baseline, &row.text);
+    let mut width = prefix + draw_text(hdc, text_font, color, x + prefix, baseline, &row.text);
     if let Some(code) = &row.code {
         width += draw_text(
             hdc,
@@ -527,4 +551,20 @@ fn fill_round_rect(hdc: HDC, rect: RECT, color: COLORREF, radius: i32) {
         let _ = DeleteObject(brush.into());
         let _ = DeleteObject(region.into());
     }
+}
+
+/// 首选词左侧的强调竖条：高约行高的七分之四、垂直居中，胶囊形。`word_x` 是候选词的左边界。
+fn draw_accent_bar(hdc: HDC, theme: &Theme, word_x: i32, top: i32, bottom: i32) {
+    let bar_w = (theme.padding / 3).max(scale_line(theme) * 2);
+    let row_height = bottom - top;
+    let bar_h = row_height * 4 / 7;
+    let bar_top = top + (row_height - bar_h) / 2;
+    let left = word_x - bar_w - theme.column_gap / 3;
+    let rect = RECT {
+        left,
+        top: bar_top,
+        right: left + bar_w,
+        bottom: bar_top + bar_h,
+    };
+    fill_round_rect(hdc, rect, theme.accent, bar_w / 2);
 }

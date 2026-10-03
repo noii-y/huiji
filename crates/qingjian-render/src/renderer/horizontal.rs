@@ -98,6 +98,8 @@ impl Renderer {
                     item_width + inset * 2.0,
                     row_height,
                 );
+                let word_x = x + item.index_width + m.px(INDEX_GAP);
+                self.draw_accent_bar(canvas, m, word_x, y, row_height);
             }
             self.draw_text(
                 canvas,
@@ -113,6 +115,7 @@ impl Renderer {
                 x + item.index_width + m.px(INDEX_GAP),
                 top,
                 text_height,
+                Some(i) == frame.highlighted,
             );
             x += item_width + m.column_gap();
         }
