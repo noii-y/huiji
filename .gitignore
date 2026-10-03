@@ -6,3 +6,6 @@
 /logs
 /data
 .playwright-mcp/
+
+# 灰迹：端侧模型体积大，不入库（按评测文档的来源自行下载）
+huiji/models/
