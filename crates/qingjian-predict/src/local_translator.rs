@@ -119,15 +119,22 @@ impl Predictor for LocalTranslator {
     }
 
     fn submit(&mut self, request: PredictionRequest) {
-        // 这一版只接翻译请求：原文在 `text`。打拼音给译文的 Compose 路径后面再加。
-        if request.kind != PredictionKind::Translate {
+        // 翻译选中文字时原文在 `text`；打整句拼音时用 Core 本地组出的整句 `guess`。
+        // 问字模式不翻译。
+        let source = match request.kind {
+            PredictionKind::Translate => request.text,
+            PredictionKind::Compose => request.guess,
+            PredictionKind::Question => return,
+        };
+        let source = source.trim();
+        if source.is_empty() {
             return;
         }
-        let text = request.text.trim();
-        if text.is_empty() {
-            return;
-        }
-        if self.jobs.send((request.sequence, text.to_owned())).is_err() {
+        if self
+            .jobs
+            .send((request.sequence, source.to_owned()))
+            .is_err()
+        {
             tracing::warn!("端侧翻译线程已退出，请求被丢弃");
         }
     }
@@ -153,7 +160,7 @@ mod tests {
         (translator, job_rx)
     }
 
-    fn request(sequence: u64, kind: PredictionKind, text: &str) -> PredictionRequest {
+    fn request(sequence: u64, kind: PredictionKind, text: &str, guess: &str) -> PredictionRequest {
         PredictionRequest {
             sequence,
             kind,
@@ -163,7 +170,7 @@ mod tests {
             letters: String::new(),
             syllables: 0,
             candidates: Vec::new(),
-            guess: String::new(),
+            guess: guess.to_owned(),
             max_items: 1,
             want_sentence: true,
             text: text.to_owned(),
@@ -174,7 +181,7 @@ mod tests {
     #[test]
     fn 正常翻译请求进入队列() {
         let (mut translator, job_rx) = harness();
-        translator.submit(request(7, PredictionKind::Translate, "你好"));
+        translator.submit(request(7, PredictionKind::Translate, "你好", ""));
 
         let (sequence, text) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(sequence, 7);
@@ -182,23 +189,45 @@ mod tests {
     }
 
     #[test]
-    fn 非翻译请求被忽略() {
+    fn 整句拼音用本地guess进入队列() {
         let (mut translator, job_rx) = harness();
-        translator.submit(request(1, PredictionKind::Compose, ""));
+        translator.submit(request(4, PredictionKind::Compose, "", "你今天晚上有空吗"));
+
+        let (sequence, text) = job_rx.try_recv().expect("任务应进入队列");
+        assert_eq!(sequence, 4);
+        assert_eq!(text, "你今天晚上有空吗");
+    }
+
+    #[test]
+    fn 整句guess为空被忽略() {
+        let (mut translator, job_rx) = harness();
+        translator.submit(request(1, PredictionKind::Compose, "", ""));
+        assert!(job_rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn 问字请求被忽略() {
+        let (mut translator, job_rx) = harness();
+        translator.submit(request(5, PredictionKind::Question, "", ""));
         assert!(job_rx.try_recv().is_err());
     }
 
     #[test]
     fn 空白翻译请求被忽略() {
         let (mut translator, job_rx) = harness();
-        translator.submit(request(2, PredictionKind::Translate, "   "));
+        translator.submit(request(2, PredictionKind::Translate, "   ", ""));
         assert!(job_rx.try_recv().is_err());
     }
 
     #[test]
     fn 原文两端空白被裁掉() {
         let (mut translator, job_rx) = harness();
-        translator.submit(request(3, PredictionKind::Translate, "  今天天气不错  "));
+        translator.submit(request(
+            3,
+            PredictionKind::Translate,
+            "  今天天气不错  ",
+            "",
+        ));
         let (_, text) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(text, "今天天气不错");
     }
