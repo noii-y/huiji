@@ -7,6 +7,9 @@ use super::{CandidateRenderer, LayoutMode, LogLevel, PreeditMode, ShiftLetter, T
 /// 每页最多几个候选：数字键只有 1–9。
 pub const MAX_PAGE_SIZE: usize = 9;
 
+/// 每页默认几个候选。
+pub const DEFAULT_PAGE_SIZE: usize = 5;
+
 /// 翻页键对的可选值，第一项是缺省：第一个键向前、第二个向后。
 /// 缺省不用 `,` `.`：组句中敲逗号句号应该把首选上屏再补一个全角标点（`nihao,zaima` 一气打完），
 /// 拿它们翻页就得先按空格再敲标点。选 `-` `=` 时组句中的 `-` 是翻页，不再进英文直输段（#43）。
@@ -120,7 +123,7 @@ impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
             learning_language: "en".to_owned(),
-            page_size: MAX_PAGE_SIZE,
+            page_size: DEFAULT_PAGE_SIZE,
             page_keys: PAGE_KEY_OPTIONS[0].to_owned(),
             theme: ThemeMode::default(),
             layout: LayoutMode::default(),
@@ -281,7 +284,7 @@ mod tests {
     #[test]
     fn page_size_and_keys_are_sanitized() {
         let mut general = GeneralConfig::default();
-        assert_eq!(general.page_size(), 9);
+        assert_eq!(general.page_size(), 5);
         assert_eq!(general.page_keys(), ('[', ']'));
         general.page_size = 0;
         general.page_keys = ",.".to_owned();

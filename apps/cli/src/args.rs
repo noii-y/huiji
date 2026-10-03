@@ -119,7 +119,7 @@ pub struct Args {
     pub typing: bool,
 
     /// 只显示前 N 个候选
-    #[arg(long, default_value_t = 9)]
+    #[arg(long, default_value_t = 5)]
     pub limit: usize,
 
     /// 回放评测：读输入日志（input-log.jsonl），把每次上屏时的键重新喂给引擎，算首选命中率等指标。只在内存里学习，不写任何文件
