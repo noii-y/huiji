@@ -10,13 +10,17 @@ pub const MAX_PAGE_SIZE: usize = 9;
 /// 每页默认几个候选。
 pub const DEFAULT_PAGE_SIZE: usize = 5;
 
-/// 翻页键对的可选值，第一项是缺省：第一个键向前、第二个向后。
-/// 缺省不用 `,` `.`：组句中敲逗号句号应该把首选上屏再补一个全角标点（`nihao,zaima` 一气打完），
-/// 拿它们翻页就得先按空格再敲标点。选 `-` `=` 时组句中的 `-` 是翻页，不再进英文直输段（#43）。
+/// 翻页键对的可选值：第一个键向前、第二个向后。
+/// 缺省用 `-` `=`（与微软、搜狗一致）：组句中敲 `-`/`=` 翻页，不进英文直输段（#43）。
+/// 不用 `,` `.` 当默认：组句中敲逗号句号应该把首选上屏再补全角标点（`nihao,zaima` 一气打完），
+/// 拿它们翻页就得先按空格再敲标点。
 pub const PAGE_KEY_OPTIONS: [&str; 3] = ["[]", ",.", "-="];
 
-/// 缺省翻页键对，与 [`PAGE_KEY_OPTIONS`] 第一项一致。
-pub const DEFAULT_PAGE_KEYS: (char, char) = ('[', ']');
+/// 缺省翻页键对的配置写法，与 [`DEFAULT_PAGE_KEYS`] 对应。
+pub const PAGE_KEYS_DEFAULT: &str = "-=";
+
+/// 缺省翻页键对：`-` 上一页、`=` 下一页，与微软、搜狗一致；对应 [`PAGE_KEY_OPTIONS`] 中的 `"-="`。
+pub const DEFAULT_PAGE_KEYS: (char, char) = ('-', '=');
 
 /// `[general]` 分节：与具体功能无关的常规项。
 /// `learning_language` 写这个值表示不显示译文。
@@ -124,7 +128,7 @@ impl Default for GeneralConfig {
         Self {
             learning_language: "en".to_owned(),
             page_size: DEFAULT_PAGE_SIZE,
-            page_keys: PAGE_KEY_OPTIONS[0].to_owned(),
+            page_keys: PAGE_KEYS_DEFAULT.to_owned(),
             theme: ThemeMode::default(),
             layout: LayoutMode::default(),
             horizontal_grid: false,
@@ -287,7 +291,7 @@ mod tests {
     fn page_size_and_keys_are_sanitized() {
         let mut general = GeneralConfig::default();
         assert_eq!(general.page_size(), 5);
-        assert_eq!(general.page_keys(), ('[', ']'));
+        assert_eq!(general.page_keys(), ('-', '='));
         general.page_size = 0;
         general.page_keys = ",.".to_owned();
         assert_eq!(general.page_size(), 1);
@@ -295,8 +299,10 @@ mod tests {
         general.page_size = 42;
         general.page_keys = "ab".to_owned();
         assert_eq!(general.page_size(), 9);
-        assert_eq!(general.page_keys(), ('[', ']'));
+        assert_eq!(general.page_keys(), ('-', '='));
         general.page_keys = ",,".to_owned();
+        assert_eq!(general.page_keys(), ('-', '='));
+        general.page_keys = "[]".to_owned();
         assert_eq!(general.page_keys(), ('[', ']'));
     }
 
@@ -307,7 +313,7 @@ mod tests {
         assert!(!general.aux_code_show);
         general.aux_code_key = "/".to_owned();
         assert_eq!(general.aux_code_key(), '/');
-        for bad in ["", "ab", "a", "1", "[", "中"] {
+        for bad in ["", "ab", "a", "1", "-", "中"] {
             general.aux_code_key = bad.to_owned();
             assert_eq!(general.aux_code_key(), ';', "{bad}");
         }

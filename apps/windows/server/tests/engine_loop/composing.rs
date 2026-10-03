@@ -292,7 +292,11 @@ fn learning_data_persists_to_user_dir() {
 #[test]
 fn raw_segment_takes_digits_and_keeps_the_space() {
     // `-` 进英文直输段之后数字是内容不是选词键，空格整段原样上屏并保留空格（#28 排查时发现 `gpt-6` 丢了 6）。
-    let mut router = router();
+    // 默认翻页已是 `-=`，组句中 `-` 会翻页；这里改用 `[]` 档，让 `-` 进直输段来测这条路径。
+    let mut router = router_with(RouterConfig {
+        page_keys: ('[', ']'),
+        ..RouterConfig::default()
+    });
     let mut frame = Frame::default();
     for c in "gpt-6".chars() {
         let (outcome, commit, next) = press(&mut router, letter(c));

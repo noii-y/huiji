@@ -15,8 +15,18 @@ pub(crate) const UP: u32 = 0x26;
 pub(crate) const RIGHT: u32 = 0x27;
 pub(crate) const DOWN: u32 = 0x28;
 
+/// 小键盘减号 / 加号 VK：组句中固定为上一页 / 下一页，与配置的翻页档无关。
+pub(crate) const KEYPAD_SUBTRACT: u32 = 0x6D;
+pub(crate) const KEYPAD_ADD: u32 = 0x6B;
+
 /// 翻页键对 `(上一页, 下一页)`：返回 -1 / +1。
 pub(crate) fn page_key(event: &KeyEvent, page_keys: (char, char)) -> Option<isize> {
+    // 小键盘 +/- 任何配置档下都翻页：小键盘是专门的数字 / 翻页区，字符 '+' 也不匹配主键盘 '='
+    match event.virtual_key {
+        KEYPAD_SUBTRACT => return Some(-1),
+        KEYPAD_ADD => return Some(1),
+        _ => {}
+    }
     let c = event.character?;
     if c == page_keys.0 {
         Some(-1)
@@ -45,4 +55,38 @@ pub(crate) fn digit_key(virtual_key: u32) -> Option<usize> {
 /// 小键盘区的键（数字与 `* + - . /`）：敲出来的标点一律半角。
 pub(crate) fn is_keypad(virtual_key: u32) -> bool {
     (0x60..=0x6F).contains(&virtual_key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
+
+    fn key(virtual_key: u32, character: Option<char>) -> KeyEvent {
+        KeyEvent::new(virtual_key, character, KeyModifiers::default())
+    }
+
+    #[test]
+    fn keypad_plus_minus_pages_regardless_of_config() {
+        // 默认 -= 档
+        assert_eq!(
+            page_key(&key(KEYPAD_SUBTRACT, Some('-')), ('-', '=')),
+            Some(-1)
+        );
+        assert_eq!(page_key(&key(KEYPAD_ADD, Some('+')), ('-', '=')), Some(1));
+        // 换成 [] 档，小键盘 +/- 照样成对翻页
+        assert_eq!(
+            page_key(&key(KEYPAD_SUBTRACT, Some('-')), ('[', ']')),
+            Some(-1)
+        );
+        assert_eq!(page_key(&key(KEYPAD_ADD, Some('+')), ('[', ']')), Some(1));
+    }
+
+    #[test]
+    fn main_keys_follow_the_configured_pair() {
+        let pair = ('-', '=');
+        assert_eq!(page_key(&key(0xBD, Some('-')), pair), Some(-1)); // 主键盘 -
+        assert_eq!(page_key(&key(0xBB, Some('=')), pair), Some(1)); // 主键盘 =
+        assert_eq!(page_key(&key(0x41, Some('a')), pair), None);
+    }
 }
