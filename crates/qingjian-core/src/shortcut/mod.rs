@@ -14,7 +14,10 @@ use jiff::Zoned;
 
 use crate::candidate::{Candidate, CandidateKind};
 
-pub use calendar::{date_forms, time_forms, weekday_forms};
+pub use calendar::{
+    date_forms, date_forms_from, parse_date, parse_time, time_forms, time_forms_from, weekday_for,
+    weekday_forms,
+};
 pub use evaluator::evaluate;
 pub use numeral::{
     amount_lower, amount_upper, chinese_decimal_lower, chinese_decimal_upper, chinese_lower,
@@ -56,7 +59,7 @@ pub fn could_be_unicode(body: &str) -> bool {
 /// 表达式模式下允许敲进缓冲区的非字母字符：数字与四则运算符号。
 /// 字母（`x` 当乘号）本来就能进缓冲区，不在此列。
 pub fn is_expression_char(c: char) -> bool {
-    c.is_ascii_digit() || matches!(c, '+' | '-' | '*' | '/' | '(' | ')' | '.' | '^')
+    c.is_ascii_digit() || matches!(c, '+' | '-' | '*' | '/' | '(' | ')' | '.' | '^' | ':')
 }
 
 /// 按输入算快捷候选；不是快捷输入时为空。`expression` 是表达式键；`now` 由调用方给，测试可固定时间。
@@ -86,8 +89,20 @@ pub fn candidates(input: &str, expression: char, now: &Zoned) -> Vec<Candidate> 
 /// 金额最多几位小数（角、分）。
 const AMOUNT_FRACTION_DIGITS: usize = 2;
 
-/// 表达式键之后的部分：一个数出中文数字与金额，四则运算出结果与「算式=结果」。
+/// 表达式键之后的部分：日期 / 时间串给几种写法，一个数出中文数字与金额，四则运算出结果与「算式=结果」。
 fn expression_forms(body: &str) -> Vec<String> {
+    // 日期串（v2026-10-1）：三种写法，再附星期几。
+    if let Some((year, month, day)) = parse_date(body) {
+        let mut forms = date_forms_from(year, month, day);
+        if let Some(weekday) = weekday_for(year, month, day) {
+            forms.push(weekday);
+        }
+        return forms;
+    }
+    // 时间串（v12:30）。
+    if let Some((hour, minute, second)) = parse_time(body) {
+        return time_forms_from(hour, minute, second);
+    }
     if let Some(forms) = number_forms(body) {
         return forms;
     }
@@ -201,9 +216,34 @@ mod tests {
     }
 
     #[test]
+    fn datetime_shortcuts() {
+        let date = ["2026年10月1日", "2026-10-01", "2026/10/01", "星期四"];
+        // 完整年月日：三种分隔符都认，输出三种写法再附星期。
+        assert_eq!(texts("v2026-10-1"), date);
+        assert_eq!(texts("v2026/10/1"), date);
+        assert_eq!(texts("v2026.10.1"), date);
+        // 两段不判日期：10-1 是减法。
+        assert_eq!(texts("v10-1"), ["9", "10-1=9"]);
+        // 点号两段不当日期，仍是小数读法。
+        let decimal = texts("v3.14");
+        assert_eq!(decimal[0], "三点一四");
+        assert_eq!(decimal[1], "叁点壹肆");
+        // 不存在的日期不当日期，回落成算式（连减）。
+        assert_eq!(texts("v2026-13-1"), ["2012", "2026-13-1=2012"]);
+        assert_eq!(texts("v2026-10-40"), ["1976", "2026-10-40=1976"]);
+        // 时间：时分、时分秒。
+        assert_eq!(texts("v12:30"), ["12:30", "12点30分"]);
+        assert_eq!(texts("v12:30:45"), ["12:30", "12:30:45", "12点30分"]);
+        // 越界时间不解析。
+        assert!(texts("v25:00").is_empty());
+        assert!(texts("v12:60").is_empty());
+    }
+
+    #[test]
     fn expression_chars() {
         assert!(is_expression_char('7'));
         assert!(is_expression_char('('));
+        assert!(is_expression_char(':'));
         assert!(!is_expression_char('='));
         assert!(!is_expression_char('x'));
     }
