@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="huiji/assets/huiji-banner.png" alt="灰迹 Huiji" width="100%">
+  <img src="https://github.com/noii-y/huiji/raw/main/huiji/assets/huiji-banner.png" alt="灰迹 Huiji" width="100%">
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 ## 边打字，边学外语
 
 <p align="center">
-  <img src="huiji/assets/huiji-candidates.png" alt="灰迹候选窗" width="380">
+  <img src="https://github.com/noii-y/huiji/raw/main/huiji/assets/huiji-candidates.png" alt="灰迹候选窗" width="380">
 </p>
 
 - **词旁边就是外文。** 选词时眼睛顺带扫一眼：这个词英文如何拼写、是动词还是名词。一天敲下数千字，便能反复接触这些词，比正襟危坐背单词轻松，也更容易坚持。这套「词旁译词」是青简的标志性功能，灰迹原样保留。
