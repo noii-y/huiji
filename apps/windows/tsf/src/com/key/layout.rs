@@ -36,6 +36,15 @@ mod tests {
     use windows::core::PCWSTR;
     use windows::core::w;
 
+    /// 键盘布局是会话级全局状态，加载 / 卸载 / Activate 会互相干扰；
+    /// 所有会 Load 布局的测试用这把锁串行执行。
+    static LAYOUT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    fn layout_lock() -> std::sync::MutexGuard<'static, ()> {
+        LAYOUT_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
     /// 列出当前会话已加载的布局（HKL 低 32 位）。
     fn session_layouts() -> Vec<u32> {
         let n = unsafe { GetKeyboardLayoutList(None) };
@@ -76,6 +85,7 @@ mod tests {
 
     #[test]
     fn punctuation_and_digits_follow_layout() {
+        let _lock = layout_lock();
         // 不加 KLF_ACTIVATE，不切换用户正在使用的布局。
         let us = TestLayout::load(w!("00000409"));
         let de = TestLayout::load(w!("00000407"));
@@ -95,6 +105,7 @@ mod tests {
     /// 关掉 NumLock 时系统上报的 vk 是导航键（VK_INSERT / VK_END…），到不了这里。
     #[test]
     fn keypad_digits_and_operators_resolve() {
+        let _lock = layout_lock();
         let us = TestLayout::load(w!("00000409"));
         let mut state = [0; 256];
         state[VK_NUMLOCK.0 as usize] = 0x01;
@@ -121,6 +132,7 @@ mod tests {
 
     #[test]
     fn dead_key_lookup_does_not_change_next_character() {
+        let _lock = layout_lock();
         let intl = TestLayout::load(w!("00020409"));
         let state = [0; 256];
         for _ in 0..2 {
@@ -149,6 +161,7 @@ mod tests {
 
     #[test]
     fn event_reads_thread_layout_and_keyboard_state() {
+        let _lock = layout_lock();
         use crate::com::key::event::to_key_event;
         use crate::com::service::TextService;
         use windows::Win32::Foundation::{LPARAM, WPARAM};
