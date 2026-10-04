@@ -22,4 +22,7 @@ pub(super) enum Next {
 
     /// 转发出错、已断连：放行本键。
     Abort,
+
+    /// Server 无响应（请求超时），已重启 Server：本键按「连不上 Server」兜底（拼音字母吃掉、其余放行）。
+    Restarted,
 }

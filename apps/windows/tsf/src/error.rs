@@ -14,4 +14,8 @@ pub enum ClientError {
     /// 收到了与当前请求不匹配的消息。
     #[error("unexpected server message: {0}")]
     Unexpected(&'static str),
+
+    /// 发出请求后在超时时间内没收到 Server 应答（Server 卡住或无响应）。
+    #[error("server did not respond in time")]
+    Timeout,
 }

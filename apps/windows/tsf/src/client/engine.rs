@@ -1,4 +1,7 @@
 use std::io::{Read, Write};
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
 use qingjian_platform::protocol::{
     ClientMessage, Frame, IndicatorCommand, InputSettings, KeyEvent, PROTOCOL_VERSION, ScreenRect,
@@ -8,10 +11,15 @@ use qingjian_platform::protocol::{
 use super::{KeyReply, KeyResponse, ModeSyncReply};
 use crate::error::ClientError;
 
+/// 等 Server 应答的上限。本地候选几十毫秒，端侧整句翻译 P90 约 100ms，留到 1 秒覆盖偶发慢；
+/// 超时即判定 Server 无响应，调用方负责重启它。
+const RESPONSE_TIMEOUT: Duration = Duration::from_secs(1);
+
 /// 连 Server 的一个会话客户端，开在一条已连好的双工流上（Windows 下是命名管道，测试里是内存流）。
 /// 传输是一问一答；开关会话与通知类消息单向发。
 pub struct EngineClient<S> {
-    stream: S,
+    /// 连接流。`None` 只在「请求超时、连接作废」后出现，调用方随即丢弃本客户端重连。
+    stream: Option<S>,
 
     /// 本会话标识，随每条消息带上。
     session: SessionId,
@@ -20,7 +28,7 @@ pub struct EngineClient<S> {
     private: Option<bool>,
 }
 
-impl<S: Read + Write> EngineClient<S> {
+impl<S: Read + Write + Send + 'static> EngineClient<S> {
     /// 开一个会话；Server 随即回一次按键行为设置（切换键、内置英文模式），带出来交给调用方。
     /// `app` 是宿主应用的 exe 文件名，Server 据此查按应用的设置。
     pub fn open(
@@ -42,7 +50,7 @@ impl<S: Read + Write> EngineClient<S> {
         };
         Ok((
             Self {
-                stream,
+                stream: Some(stream),
                 session,
                 private: None,
             },
@@ -213,13 +221,32 @@ impl<S: Read + Write> EngineClient<S> {
     }
 
     fn send(&mut self, message: &ClientMessage) -> Result<(), ClientError> {
-        write_message(&mut self.stream, message)?;
+        let stream = self.stream.as_mut().ok_or(ClientError::Closed)?;
+        write_message(stream, message)?;
         Ok(())
     }
 
-    /// 一问一答；对端在帧边界关闭算 [`ClientError::Closed`]。
+    /// 一问一答；对端在帧边界关闭算 [`ClientError::Closed`]，超过 [`RESPONSE_TIMEOUT`] 没应答算
+    /// [`ClientError::Timeout`]。读写放独立线程，Server 卡住时不把应用的 UI 线程一起拖住。
     fn call(&mut self, message: &ClientMessage) -> Result<ServerMessage, ClientError> {
-        self.send(message)?;
-        read_message(&mut self.stream)?.ok_or(ClientError::Closed)
+        let stream = self.stream.take().ok_or(ClientError::Closed)?;
+        let request = message.clone();
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let mut stream = stream;
+            let result =
+                write_message(&mut stream, &request).and_then(|()| read_message(&mut stream));
+            let _ = tx.send((stream, result));
+        });
+        match rx.recv_timeout(RESPONSE_TIMEOUT) {
+            Ok((stream, result)) => {
+                self.stream = Some(stream);
+                result?.ok_or(ClientError::Closed)
+            }
+            // 连接随线程作废（stream 已 move 走，self.stream 保持 None）。不 join：调用方会杀掉
+            // 无响应的 Server，管道一关闭线程自会结束。
+            Err(mpsc::RecvTimeoutError::Timeout) => Err(ClientError::Timeout),
+            Err(mpsc::RecvTimeoutError::Disconnected) => Err(ClientError::Closed),
+        }
     }
 }

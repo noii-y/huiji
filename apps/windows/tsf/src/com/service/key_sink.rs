@@ -10,6 +10,7 @@ use windows::core::{BOOL, GUID, Ref, Result};
 use qingjian_platform::protocol::{KeyEvent, KeyOutcome};
 
 use super::TextService_Impl;
+use super::launch;
 use super::next::Next;
 use crate::client::KeyReply;
 use crate::com::composition::preedit_string;
@@ -17,6 +18,7 @@ use crate::com::game_mode;
 use crate::com::key::event::{digit_key, is_edit, is_letter, is_mode_letter, is_nav, to_key_event};
 use crate::com::key::preserved;
 use crate::com::log::log;
+use crate::error::ClientError;
 
 impl ITfKeyEventSink_Impl for TextService_Impl {
     /// 失焦：把敲了一半的拼音原样落定（对应 macOS 的 `commitComposition`）。焦点本身交给
@@ -232,11 +234,25 @@ impl TextService_Impl {
                     Next::ReadSelection { request }
                 }
                 Err(error) => {
-                    log(&format!("转发按键失败，放行并断开，下一键重连: {error}"));
-                    *guard = None;
-                    self.last_connect_failure.set(None);
-                    self.shared.end_composing();
-                    Next::Abort
+                    // 请求超时：Server 卡住无响应，重启它，本键走无 Server 兜底。
+                    if matches!(error, ClientError::Timeout) {
+                        log("Server 超过 1 秒未应答，判定无响应，重启 Server");
+                        let restarted = launch::restart_server();
+                        *guard = None;
+                        self.last_connect_failure.set(None);
+                        self.shared.end_composing();
+                        if restarted {
+                            Next::Restarted
+                        } else {
+                            Next::Abort
+                        }
+                    } else {
+                        log(&format!("转发按键失败，放行并断开，下一键重连: {error}"));
+                        *guard = None;
+                        self.last_connect_failure.set(None);
+                        self.shared.end_composing();
+                        Next::Abort
+                    }
                 }
             }
         };
@@ -278,6 +294,8 @@ impl TextService_Impl {
                 self.read_selection(pic, request);
                 true
             }
+            // Server 刚重启：本键按无 Server 兜底（拼音字母吃掉防漏进文档，标点 / 数字放行）。
+            (Next::Restarted, _) => eats_without_server(&event),
             (Next::Abort, _) => false,
         }
     }

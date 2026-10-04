@@ -103,6 +103,24 @@ pub(super) fn launch_server() -> bool {
     }
 }
 
+/// Server 无响应（请求超时）时重启它：结束旧进程，再拉起新的。返回新 Server 是否请求启动。
+pub(super) fn restart_server() -> bool {
+    kill_server();
+    // 清掉本进程的拉起冷却，让下面立即能起新的（超时往往紧挨着一次连接失败，冷却还在）。
+    if let Ok(mut last) = LAST_LAUNCH.lock() {
+        *last = None;
+    }
+    launch_server()
+}
+
+/// 结束所有 qingjian-server 进程。同用户、同完整性，taskkill 无需提权。杀掉后，各应用里阻塞在
+/// 等应答的读操作随管道关闭立即返回错误，下一键重连；卡死的处理线程也随之解除。
+fn kill_server() {
+    let _ = std::process::Command::new("taskkill")
+        .args(["/f", "/im", "qingjian-server.exe"])
+        .output();
+}
+
 /// 进程内冷却：距上次尝试不到 [`LAUNCH_COOLDOWN`] 就不试。时间在尝试**之前**记，失败也冷却。
 fn cooldown_passed() -> bool {
     let Ok(mut last) = LAST_LAUNCH.lock() else {
