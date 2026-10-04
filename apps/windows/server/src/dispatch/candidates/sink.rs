@@ -22,6 +22,9 @@ pub trait CandidateSink: Send {
 
     /// 换画法：装上时与配置热加载后调，只在设置变了时调。
     fn configure(&self, settings: RenderSettings);
+
+    /// 看门狗节拍：Router 每秒 tick 调一次，默认空；UI 实现用来探测自身线程是否还活着。
+    fn watchdog(&self) {}
 }
 
 /// 不画候选窗口的空实现。

@@ -146,11 +146,13 @@ impl Router {
             })
     }
 
-    /// 到点了：接上加载好的模型、推进重排、看一眼配置文件。工人循环超时与 DLL 的 `Poll` 都会调。
+    /// 到点了：接上加载好的模型、推进重排、看一眼配置文件、探一次 UI 线程活性。
+    /// 工人循环超时与 DLL 的 `Poll` 都会调。
     pub fn tick(&mut self) {
         self.attach_loaded_model();
         self.advance_rescoring();
         self.poll_config_reload();
+        self.candidates.watchdog();
     }
 
     /// 防抖到点就发请求；在等结果就收一次，收到了重查并重画当前页。

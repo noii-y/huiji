@@ -10,10 +10,13 @@ mod layered;
 mod monitor;
 mod painter;
 mod status;
+mod watchdog;
 mod window_class;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
@@ -35,6 +38,7 @@ use self::candidates::CandidateWindow;
 use self::command::UiCommand;
 use self::painter::{Painter, SharedPainter};
 use self::status::StatusBar;
+use self::watchdog::{Heartbeat, PING_INTERVAL, WATCHDOG_EXIT_CODE, now_millis};
 use crate::dispatch::{CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView};
 
 /// 状态条上的操作（点格子 / 拖动结束）回给 Router 的回调，UI 线程上调。
@@ -51,6 +55,12 @@ pub struct UiHandle {
 
     /// UI 线程 id，`PostThreadMessageW` 用。
     thread_id: u32,
+
+    /// UI 线程心跳，看门狗看它是否新鲜。
+    heartbeat: Arc<Heartbeat>,
+
+    /// 上次发心跳探测的时间（Unix 毫秒）。
+    last_ping: Arc<AtomicU64>,
 }
 
 impl UiHandle {
@@ -59,14 +69,18 @@ impl UiHandle {
         // 用 Option<u32> 而非 Result 回报，免得 windows Error 跨线程。
         let (ready_tx, ready_rx) = mpsc::channel::<Option<u32>>();
         let (command_tx, command_rx) = mpsc::channel::<UiCommand>();
+        let heartbeat = Arc::new(Heartbeat::new());
+        let ui_heartbeat = heartbeat.clone();
         thread::Builder::new()
             .name("qingjian-candidates".to_owned())
-            .spawn(move || run(command_rx, &ready_tx, on_status))
+            .spawn(move || run(command_rx, &ready_tx, on_status, ui_heartbeat))
             .map_err(|_| Error::from(E_FAIL))?;
         match ready_rx.recv() {
             Ok(Some(thread_id)) => Ok(Self {
                 sender: command_tx,
                 thread_id,
+                heartbeat,
+                last_ping: Arc::new(AtomicU64::new(0)),
             }),
             _ => Err(Error::from(E_FAIL)),
         }
@@ -76,6 +90,23 @@ impl UiHandle {
     fn post(&self, command: UiCommand) {
         if self.sender.send(command).is_ok() {
             let _ = unsafe { PostThreadMessageW(self.thread_id, WM_WAKE, WPARAM(0), LPARAM(0)) };
+        }
+    }
+
+    /// 看门狗节拍（Router 每秒 tick 调）：定期发心跳，应答超时判定 UI 线程死亡则结束进程。
+    fn watchdog_tick(&self) {
+        let now = now_millis();
+        let last = self.last_ping.load(Ordering::Relaxed);
+        if last == 0 || now.saturating_sub(last) >= PING_INTERVAL.as_millis() as u64 {
+            self.post(UiCommand::Heartbeat);
+            self.last_ping.store(now, Ordering::Relaxed);
+        }
+        if self.heartbeat.is_stale() {
+            tracing::error!(
+                "候选窗 UI 线程超过 6 秒未应答心跳，判定卡死，结束 Server 进程以便 TSF 重拉"
+            );
+            // 立即终止，OS 回收卡死线程与其窗口；TSF 下一键重拉干净进程。
+            std::process::exit(WATCHDOG_EXIT_CODE);
         }
     }
 }
@@ -91,6 +122,10 @@ impl CandidateSink for UiHandle {
 
     fn configure(&self, settings: RenderSettings) {
         self.post(UiCommand::Configure(settings));
+    }
+
+    fn watchdog(&self) {
+        self.watchdog_tick();
     }
 }
 
@@ -135,7 +170,12 @@ pub(super) fn module_handle() -> HINSTANCE {
 }
 
 /// UI 线程主体：建窗口、报回线程 id、跑消息循环。
-fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: StatusEvents) {
+fn run(
+    commands: Receiver<UiCommand>,
+    ready: &Sender<Option<u32>>,
+    on_status: StatusEvents,
+    heartbeat: Arc<Heartbeat>,
+) {
     // 按物理像素定位，与应用报来的组句屏幕矩形对齐；已设过会失败，忽略。
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let thread_id = unsafe { GetCurrentThreadId() };
@@ -169,7 +209,7 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
         if msg.message == WM_WAKE {
             // 一次唤醒排空整个队列，保住 Hide→Show 的先后。
             while let Ok(command) = commands.try_recv() {
-                apply(&window, status.as_ref(), &painter, command);
+                apply(&window, status.as_ref(), &painter, &heartbeat, command);
             }
             continue;
         }
@@ -184,6 +224,7 @@ fn apply(
     window: &CandidateWindow,
     status: Option<&StatusBar>,
     painter: &SharedPainter,
+    heartbeat: &Heartbeat,
     command: UiCommand,
 ) {
     match command {
@@ -204,6 +245,7 @@ fn apply(
             }
         }
         UiCommand::Configure(settings) => Painter::configure(painter, &settings),
+        UiCommand::Heartbeat => heartbeat.beat(),
     }
 }
 

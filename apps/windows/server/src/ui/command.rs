@@ -20,4 +20,7 @@ pub(super) enum UiCommand {
 
     /// 换画法（渲染器 / 字体）。
     Configure(RenderSettings),
+
+    /// 心跳探测：UI 线程应答，更新看门狗时间戳。
+    Heartbeat,
 }
