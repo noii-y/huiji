@@ -114,8 +114,8 @@ Source: "{#ModelSource}\*"; DestDir: "{app}\data\models\opus-mt-zh-en-ct2"; Flag
 Source: "{#Repo}\target\release\qingjian-server.exe";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\灰迹设置"; Filename: "{app}\qingjian-settings.exe"; IconFilename: "{app}\qingjian.ico"
-Name: "{group}\卸载灰迹"; Filename: "{uninstallexe}"
+Name: "{commonprograms}\灰迹\灰迹设置"; Filename: "{app}\qingjian-settings.exe"; IconFilename: "{app}\qingjian.ico"
+Name: "{commonprograms}\灰迹\卸载灰迹"; Filename: "{uninstallexe}"
 ; 登录自启：登录时 Explorer 走 ShellExecute 拉起本快捷方式 → AppInfo 授予 uiAccess，候选窗才能盖过商店 / 任务栏搜索。
 ; 用 {commonstartup}（所有用户「启动」文件夹）而非 {userstartup}：本安装器是 admin 机器级安装，
 ; admin 模式下写每用户区会落到「谁提权就写谁」的 profile（Inno 会告警且可能不是目标用户）；
@@ -159,6 +159,8 @@ Type: files; Name: "{app}\data\model\config.json"
 Type: files; Name: "{app}\data\model\vocab.json"
 ; 0.1.4 开发版的随包码表旧位置
 Type: filesandordirs; Name: "{app}\codes"
+; 从青简升级时，旧安装在开始菜单留下的「青简」组：快捷方式统一装到「灰迹」组，旧组删除。
+Type: filesandordirs; Name: "{commonprograms}\青简"
 
 [UninstallDelete]
 ; 历次升级留下的旧版本 DLL（正常在升级时就删了；仍被占用的会留到这里）。
