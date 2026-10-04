@@ -12,6 +12,19 @@ use windows::core::{GUID, Interface, Result};
 
 use crate::com::CLSID_QINGJIAN;
 
+/// 该 profile 在本机是否启用。读 TSF 持久标记：`Enable = 0` 是被禁用（如用户删除的五笔），
+/// 没有该值或为 1 都算启用。读不到也按启用处理，避免因取不到标记而无人可切。
+fn profile_enabled(clsid: &GUID, langid: u16, profile: &GUID) -> bool {
+    let path =
+        format!(r"SOFTWARE\Microsoft\CTF\TIP\{clsid:?}\LanguageProfile\{langid:08x}\{profile:?}");
+    !matches!(
+        windows_registry::CURRENT_USER
+            .open(&path)
+            .and_then(|key| key.get_u32("Enable")),
+        Ok(0)
+    )
+}
+
 /// 选中并激活一个非灰迹的输入法 profile。
 pub(crate) fn switch_to_default() -> Result<()> {
     let profiles: ITfInputProcessorProfiles =
@@ -38,9 +51,12 @@ pub(crate) fn switch_to_default() -> Result<()> {
         None
     };
 
-    // 2. 兜底：枚举，按顺序取第一个非灰迹键盘 TIP；没有再放宽到任意非灰迹项。
+    // 2. 兜底：枚举所有非灰迹 TIP。优先选启用中的（跳过被用户禁用的，如五笔）；
+    //    没有启用中的再回退到任意非灰迹项。
     if target.is_none() {
         let enumerator = unsafe { profiles.EnumLanguageProfiles(langid) }?;
+        let mut enabled_tip: Option<(GUID, GUID)> = None;
+        let mut enabled_any: Option<(GUID, GUID)> = None;
         let mut first_tip: Option<(GUID, GUID)> = None;
         let mut first_any: Option<(GUID, GUID)> = None;
         loop {
@@ -57,11 +73,19 @@ pub(crate) fn switch_to_default() -> Result<()> {
                 if item.catid == GUID_TFCAT_TIP_KEYBOARD && first_tip.is_none() {
                     first_tip = Some((item.clsid, item.guidProfile));
                 }
+                if profile_enabled(&item.clsid, langid, &item.guidProfile) {
+                    if enabled_any.is_none() {
+                        enabled_any = Some((item.clsid, item.guidProfile));
+                    }
+                    if item.catid == GUID_TFCAT_TIP_KEYBOARD && enabled_tip.is_none() {
+                        enabled_tip = Some((item.clsid, item.guidProfile));
+                    }
+                }
             } else {
                 break;
             }
         }
-        target = first_tip.or(first_any);
+        target = enabled_tip.or(enabled_any).or(first_tip).or(first_any);
     }
 
     let (clsid, guid_profile) =
