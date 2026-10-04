@@ -38,6 +38,7 @@ impl TextService_Impl {
                 self.set_english_mode(english);
             }
             Some(MenuChoice::Server(command)) => self.send_indicator(command),
+            Some(MenuChoice::Exit) => self.exit_huiji(),
             _ => {}
         }
     }
@@ -61,7 +62,7 @@ impl TextService_Impl {
     }
 
     /// 菜单要挂在本线程的窗口上：先取焦点输入框所在窗口，没有再看前台窗口是不是本线程的。
-    fn menu_owner(&self) -> Option<HWND> {
+    pub(super) fn menu_owner(&self) -> Option<HWND> {
         let from_context = self
             .thread_mgr
             .borrow()

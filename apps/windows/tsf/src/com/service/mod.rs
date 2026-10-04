@@ -5,12 +5,14 @@
 mod connection;
 mod display;
 mod document;
+mod exit;
 mod key_sink;
 mod launch;
 mod menu;
 mod mode;
 mod next;
 mod processor;
+mod switch_profile;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

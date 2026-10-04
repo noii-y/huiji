@@ -19,10 +19,11 @@ pub(crate) struct MenuState {
     pub(crate) update_available: bool,
 }
 
-/// 点了哪一项：中 / 英 DLL 自己切，其余交给 Server。
+/// 点了哪一项：中 / 英 DLL 自己切，其余交给 Server，「退出」由文本服务切换 profile。
 pub(crate) enum MenuChoice {
     Mode { english: bool },
     Server(IndicatorCommand),
+    Exit,
 }
 
 const ID_CHINESE: u32 = 1;
@@ -31,6 +32,7 @@ const ID_PUNCTUATION: u32 = 3;
 const ID_STATUS_BAR: u32 = 4;
 const ID_SETTINGS: u32 = 5;
 const ID_DOWNLOAD: u32 = 6;
+const ID_EXIT: u32 = 7;
 
 /// 在 `point`（屏幕坐标）弹出菜单，阻塞到用户点了某项或点别处关掉。
 pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<MenuChoice> {
@@ -56,6 +58,8 @@ pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<Menu
         )));
     }
     items.push(Some((ID_SETTINGS, "设置…", MENU_ITEM_FLAGS(0))));
+    items.push(None);
+    items.push(Some((ID_EXIT, "退出灰迹…", MENU_ITEM_FLAGS(0))));
     let menu = unsafe { CreatePopupMenu() }.ok()?;
     for item in items {
         let _ = match item {
@@ -76,6 +80,7 @@ pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<Menu
         ID_STATUS_BAR => Some(MenuChoice::Server(IndicatorCommand::ToggleStatusBar)),
         ID_SETTINGS => Some(MenuChoice::Server(IndicatorCommand::OpenSettings)),
         ID_DOWNLOAD => Some(MenuChoice::Server(IndicatorCommand::OpenDownload)),
+        ID_EXIT => Some(MenuChoice::Exit),
         _ => None,
     }
 }
