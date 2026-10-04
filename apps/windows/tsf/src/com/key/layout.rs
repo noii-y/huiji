@@ -30,32 +30,72 @@ fn resolve(vk: u32, state: &[u8; 256], layout: HKL) -> Option<char> {
 mod tests {
     use super::*;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        KLF_NOTELLSHELL, LoadKeyboardLayoutW, VK_NUMLOCK, VK_SHIFT,
+        GetKeyboardLayoutList, KLF_NOTELLSHELL, LoadKeyboardLayoutW, UnloadKeyboardLayout,
+        VK_NUMLOCK, VK_SHIFT,
     };
+    use windows::core::PCWSTR;
     use windows::core::w;
+
+    /// 列出当前会话已加载的布局（HKL 低 32 位）。
+    fn session_layouts() -> Vec<u32> {
+        let n = unsafe { GetKeyboardLayoutList(None) };
+        if n <= 0 {
+            return Vec::new();
+        }
+        let mut v = vec![HKL::default(); n as usize];
+        let got = unsafe { GetKeyboardLayoutList(Some(&mut v)) };
+        v.iter()
+            .take(got.max(0) as usize)
+            .map(|h| h.0 as u32)
+            .collect()
+    }
+
+    /// 测试加载的布局在用完后卸载；测试前会话里已有的布局（如美式键盘）保持不动。
+    struct TestLayout {
+        hkl: HKL,
+        owned: bool,
+    }
+    impl TestLayout {
+        fn load(klid: PCWSTR) -> Self {
+            let before = session_layouts();
+            let hkl = unsafe { LoadKeyboardLayoutW(klid, KLF_NOTELLSHELL) }.unwrap();
+            let owned = !before.contains(&(hkl.0 as u32));
+            Self { hkl, owned }
+        }
+        fn hkl(&self) -> HKL {
+            self.hkl
+        }
+    }
+    impl Drop for TestLayout {
+        fn drop(&mut self) {
+            if self.owned {
+                unsafe { UnloadKeyboardLayout(self.hkl) }.ok();
+            }
+        }
+    }
 
     #[test]
     fn punctuation_and_digits_follow_layout() {
         // 不加 KLF_ACTIVATE，不切换用户正在使用的布局。
-        let us = unsafe { LoadKeyboardLayoutW(w!("00000409"), KLF_NOTELLSHELL) }.unwrap();
-        let de = unsafe { LoadKeyboardLayoutW(w!("00000407"), KLF_NOTELLSHELL) }.unwrap();
+        let us = TestLayout::load(w!("00000409"));
+        let de = TestLayout::load(w!("00000407"));
         let mut state = [0; 256];
-        assert_eq!(resolve(0xBA, &state, us), Some(';'));
-        assert_eq!(resolve(0x32, &state, de), Some('2'));
-        assert_eq!(resolve(0x20, &state, us), Some(' '));
+        assert_eq!(resolve(0xBA, &state, us.hkl()), Some(';'));
+        assert_eq!(resolve(0x32, &state, de.hkl()), Some('2'));
+        assert_eq!(resolve(0x20, &state, us.hkl()), Some(' '));
         state[VK_SHIFT.0 as usize] = 0x80;
-        assert_eq!(resolve(0xBA, &state, us), Some(':'));
-        assert_eq!(resolve(0xBB, &state, us), Some('+'));
-        assert_eq!(resolve(0xBB, &state, de), Some('*'));
-        assert_eq!(resolve(0x32, &state, us), Some('@'));
-        assert_eq!(resolve(0x32, &state, de), Some('"'));
+        assert_eq!(resolve(0xBA, &state, us.hkl()), Some(':'));
+        assert_eq!(resolve(0xBB, &state, us.hkl()), Some('+'));
+        assert_eq!(resolve(0xBB, &state, de.hkl()), Some('*'));
+        assert_eq!(resolve(0x32, &state, us.hkl()), Some('@'));
+        assert_eq!(resolve(0x32, &state, de.hkl()), Some('"'));
     }
 
     /// 小键盘数字与运算符也要能解出字符：V 模式（表达式模式）里敲小键盘才会进缓冲区。
     /// 关掉 NumLock 时系统上报的 vk 是导航键（VK_INSERT / VK_END…），到不了这里。
     #[test]
     fn keypad_digits_and_operators_resolve() {
-        let us = unsafe { LoadKeyboardLayoutW(w!("00000409"), KLF_NOTELLSHELL) }.unwrap();
+        let us = TestLayout::load(w!("00000409"));
         let mut state = [0; 256];
         state[VK_NUMLOCK.0 as usize] = 0x01;
         for (vk, expected) in [
@@ -75,26 +115,26 @@ mod tests {
             (0x6E, '.'),
             (0x6F, '/'),
         ] {
-            assert_eq!(resolve(vk, &state, us), Some(expected), "vk={vk:#x}");
+            assert_eq!(resolve(vk, &state, us.hkl()), Some(expected), "vk={vk:#x}");
         }
     }
 
     #[test]
     fn dead_key_lookup_does_not_change_next_character() {
-        let intl = unsafe { LoadKeyboardLayoutW(w!("00020409"), KLF_NOTELLSHELL) }.unwrap();
+        let intl = TestLayout::load(w!("00020409"));
         let state = [0; 256];
         for _ in 0..2 {
-            assert_eq!(resolve(0xDE, &state, intl), None);
+            assert_eq!(resolve(0xDE, &state, intl.hkl()), None);
             // 每次预读后立即检查，避免两次 dead key 抵消副作用。
-            assert_eq!(resolve(0x45, &state, intl), Some('e'));
+            assert_eq!(resolve(0x45, &state, intl.hkl()), Some('e'));
         }
-        assert_eq!(resolve(0, &state, intl), None);
+        assert_eq!(resolve(0, &state, intl.hkl()), None);
         let mut buffer = [0; 8];
         // 与上面的重音检查串行：内核键盘缓冲会让并行测试互相影响。
-        let dead = unsafe { ToUnicodeEx(0xDE, 0, &state, &mut buffer, 0, Some(intl)) };
-        let result = resolve(0x31, &state, intl);
+        let dead = unsafe { ToUnicodeEx(0xDE, 0, &state, &mut buffer, 0, Some(intl.hkl())) };
+        let result = resolve(0x31, &state, intl.hkl());
         // 清掉待组合的重音后再断言。
-        let count = unsafe { ToUnicodeEx(0x31, 0, &state, &mut buffer, 0, Some(intl)) };
+        let count = unsafe { ToUnicodeEx(0x31, 0, &state, &mut buffer, 0, Some(intl.hkl())) };
         assert!(dead < 0);
         assert_eq!(count, 2);
         assert_eq!(result, None);
@@ -121,14 +161,18 @@ mod tests {
         let original_layout = unsafe { GetKeyboardLayout(0) };
         let mut original_state = [0; 256];
         unsafe { GetKeyboardState(&mut original_state) }.unwrap();
+        // 记录测试前已有的布局，恢复时只卸载测试新引入的。
+        let before = session_layouts();
+        let mut loaded = Vec::new();
         // 仅修改测试线程；即使断言失败，也先恢复布局和按键状态。
-        let result = std::panic::catch_unwind(|| {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             // 本测试验证布局和按键状态，固定游戏模式为关，避免真实前台窗口影响 OnTestKeyDown。
             crate::com::game_mode::force(Some(false));
             let service = ComObject::new(TextService::new());
             let sink: ITfKeyEventSink = service.to_interface();
             for (name, expected) in [(w!("00000409"), '+'), (w!("00000407"), '*')] {
                 let layout = unsafe { LoadKeyboardLayoutW(name, KLF_NOTELLSHELL) }.unwrap();
+                loaded.push(layout);
                 unsafe { ActivateKeyboardLayout(layout, Default::default()) }.unwrap();
                 let mut state = [0; 256];
                 state[VK_SHIFT.0 as usize] = 0x80;
@@ -162,8 +206,14 @@ mod tests {
                         .as_bool()
                 );
             }
-        });
+        }));
         unsafe { ActivateKeyboardLayout(original_layout, Default::default()) }.unwrap();
+        // 恢复原布局后，只卸载测试新引入的布局。
+        for h in loaded {
+            if !before.contains(&(h.0 as u32)) {
+                unsafe { UnloadKeyboardLayout(h) }.ok();
+            }
+        }
         unsafe { SetKeyboardState(&original_state) }.unwrap();
         crate::com::game_mode::force(None);
         result.unwrap();
