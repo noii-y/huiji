@@ -295,9 +295,6 @@ pub struct Engine {
 /// 形码编码最长几位（五笔四码）：混输下超过它的输入只可能是拼音。
 const MAX_CODE_LENGTH: usize = 4;
 
-/// 英文补全最多几条（`compa` → company / compare / …）。
-const ENGLISH_COMPLETIONS: usize = 3;
-
 /// 原样上屏的字母串至少几个字母才当英文词学：单字母（`a`、`I`）不值得记。
 const MIN_ENGLISH_WORD_LETTERS: usize = 2;
 

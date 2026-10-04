@@ -7,15 +7,16 @@ fn english_words_bring_their_emoji_and_the_emoji_consumes_the_whole_input() {
     let words = WordList::parse("smile\nsmiled\n").unwrap();
     let table = EmojiTable::parse("smile\t😀 😄\n笑\t😄\n").unwrap();
     let mut engine = engine().with_english(words).with_emoji(table);
+    // 英文词的 emoji 在英文模式下配：中文模式不把整串猜成英文词
+    engine.set_english_mode(true);
     engine.set_input("smile");
     let items = engine.query().unwrap().candidates.items;
-    let position = items
+    let emoji = items
         .iter()
-        .position(|c| c.kind == CandidateKind::English && c.text == "smile")
-        .unwrap();
-    let emoji = items[position + 1].clone();
+        .find(|c| c.kind == CandidateKind::Emoji && c.text == "😀")
+        .unwrap()
+        .clone();
     assert_eq!(emoji.kind, CandidateKind::Emoji);
-    assert_eq!(emoji.text, "😀");
     assert_eq!(emoji.reading.as_deref(), Some("smile"));
     assert_eq!(engine.commit(&emoji), "😀");
     assert!(engine.composition().is_empty());

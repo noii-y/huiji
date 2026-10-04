@@ -38,8 +38,8 @@ impl Engine {
         let (segmentations, tail) = match parsed {
             Ok(parsed) => parsed,
             Err(error) => {
+                // 中文模式不猜英文词：切不动时只留日期等快捷项，没有就交给上层用原始字母兜底
                 let mut items = Vec::new();
-                self.insert_english(&mut items, true);
                 self.insert_shortcuts(&mut items, keys);
                 if items.is_empty() {
                     return Err(error);
@@ -197,28 +197,16 @@ impl Engine {
                 );
             }
         }
-        // 附加候选（英文尾段与补全、快捷、整句、emoji）都没有码：辅码筛词时一律不出
+        // 附加候选（整句、快捷、emoji）都没有码：辅码筛词时一律不出。
+        // 中文模式不把整串智能当英文词：要打英文切英文模式，那里走 english::suggest。
         if aux_code.is_none() {
-            // 中文优先：整句先进去占第一，英文词紧跟其后（第二）；关掉时英文词先进、整句排在开头的英文后面
-            if self.chinese_first {
-                self.insert_sentence(
-                    &mut items,
-                    &segmentations,
-                    correction.is_none(),
-                    english_tail.as_ref().filter(|_| correction.is_none()),
-                    head_wins,
-                );
-                self.insert_english(&mut items, unlikely);
-            } else {
-                self.insert_english(&mut items, unlikely);
-                self.insert_sentence(
-                    &mut items,
-                    &segmentations,
-                    correction.is_none(),
-                    english_tail.as_ref().filter(|_| correction.is_none()),
-                    head_wins,
-                );
-            }
+            self.insert_sentence(
+                &mut items,
+                &segmentations,
+                correction.is_none(),
+                english_tail.as_ref().filter(|_| correction.is_none()),
+                head_wins,
+            );
             // 快捷候选按敲的键认（`rq` 日期），双拼下也是
             self.insert_shortcuts(&mut items, keys);
             self.insert_emoji(&mut items);

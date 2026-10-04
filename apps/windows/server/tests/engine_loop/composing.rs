@@ -228,23 +228,23 @@ fn minus_equals_page_keys_preserve_expression_input() {
 }
 
 #[test]
-fn shift_uppercase_while_composing_commits_raw_first() {
+fn shift_uppercase_while_composing_joins_the_buffer_as_a_verbatim_segment() {
     let mut router = router();
     type_letters(&mut router, "ni");
-    // 中文模式按住 Shift 打大写字母：拼音原样上屏，字母跟在后面一起插。
+    // 中文模式按住 Shift 打大写字母：进缓冲区作为原样大写段，组句不打断。
     let shifted = KeyModifiers {
         shift: true,
         ..KeyModifiers::default()
     };
     let (outcome, commit, frame) = press(&mut router, letter_with('A', shifted));
-    assert_eq!(
-        (outcome, commit.as_deref()),
-        (KeyOutcome::Consumed, Some("niA"))
-    );
-    assert!(frame.is_empty());
-    // 没在组句时大写字母交给应用。
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert_eq!(preedit(&frame), "niA");
+    // 回车上整段（含大写）。
+    let (_, commit, _) = press(&mut router, function_key(0x0D));
+    assert_eq!(commit.as_deref(), Some("niA"));
+    // 没在组句时大写字母也进缓冲区，不再直通。
     let (outcome, commit, _) = press(&mut router, letter_with('A', shifted));
-    assert_eq!((outcome, commit), (KeyOutcome::Passthrough, None));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
 }
 
 #[test]

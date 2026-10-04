@@ -191,33 +191,24 @@ impl Router {
         }
     }
 
-    /// 中文模式：字母进拼音。缺省 Shift 大写是临时打英文——组句中先把拼音原样上屏、字母交给应用；
-    /// 配 `[general] shift_letter = "compose"` 时大写也收进缓冲区（Core 按小写匹配、原样上屏时还原大小写）。
-    /// 没在组句时的其他字符走全角标点（与 macOS 壳一致，组句中的标点仍进英文直输段）。
+    /// 中文模式：字母进缓冲区。小写字母与大写声母按拼音匹配；连续大写（Shift 敲的 PG、ID）
+    /// 由 Core 当原样片段、把句子分段，不直接放走。没在组句时的其他字符走全角标点。
     fn apply_chinese(&mut self, c: char, event: &KeyEvent) -> Effect {
         // 注音模式下数字与 `- ; , . /` 就是键盘上的音节键，跟着进缓冲区。
         let is_zhuyin_key = self.engine.is_zhuyin_mode()
             && (c.is_ascii_digit() || matches!(c, '-' | ';' | ',' | '.' | '/'));
-        if c.is_ascii_lowercase()
-            || is_zhuyin_key
-            || (c.is_ascii_uppercase() && self.config.shift_letter_compose)
-        {
+        if c.is_ascii_lowercase() || is_zhuyin_key || c.is_ascii_uppercase() {
             // 辅码态：字母进码段（逐键即筛），不进拼音缓冲区
             if c.is_ascii_lowercase() && self.engine.push_aux_code(c) {
                 return Effect::Changed(None);
             }
-            // 大写（shift_letter_compose）落在辅码态：先清码段回拼音态（与 Esc 同语义）再收进缓冲区；
+            // 大写落在辅码态：先清码段回拼音态（与 Esc 同语义）再收进缓冲区；
             // 码段不清会挂在已变化的缓冲区上继续筛
             if c.is_ascii_uppercase() && self.engine.in_aux() {
                 self.engine.clear_aux();
             }
             self.engine.push(c);
             return Effect::Changed(None);
-        }
-        if c.is_ascii_uppercase() {
-            let raw = self.composing().then(|| self.engine.take_raw());
-            self.engine.note_passthrough(c);
-            return with_prefix(raw, Effect::Passthrough, c);
         }
         if !self.composing() {
             return self.apply_punctuation(c, event);

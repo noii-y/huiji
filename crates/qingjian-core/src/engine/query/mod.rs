@@ -7,6 +7,7 @@ mod converting;
 mod english_tail;
 mod generating;
 mod lookup;
+pub(in crate::engine) mod mixed;
 mod modes;
 mod phonetic;
 mod result;
@@ -101,6 +102,9 @@ impl Engine {
         }
         if self.modes().is_question(keys, self.zhuyin) {
             return Ok(self.query_question(keys, rest, start));
+        }
+        if mixed::is_mixed_scope(keys) {
+            return Ok(self.query_mixed_segments(keys, rest, start));
         }
         if is_raw(keys, self.modes(), self.shuangpin, self.zhuyin) {
             return Ok(self.query_raw(keys, rest, start));

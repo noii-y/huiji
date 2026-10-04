@@ -274,14 +274,15 @@ fn shuangpin_enters_modes_with_shifted_letters() {
     let (_, _, frame) = type_letters(&mut router, "v");
     assert_eq!(preedit(&frame), "zh");
     press(&mut router, function_key(0x1B));
+    // 大写字母进缓冲区作为原样段，不再直通（双拼、全拼一致）。
     assert_eq!(
         press(&mut router, letter_with('A', SHIFT)).0,
-        KeyOutcome::Passthrough
+        KeyOutcome::Consumed
     );
     let mut full = router_with(RouterConfig::default());
     let (outcome, _, frame) = press(&mut full, letter_with('V', SHIFT));
-    assert_eq!(outcome, KeyOutcome::Passthrough);
-    assert!(frame.is_empty());
+    assert_eq!(outcome, KeyOutcome::Consumed);
+    assert_eq!(preedit(&frame), "V");
 }
 
 #[test]
@@ -425,22 +426,18 @@ fn shift_space_toggles_full_width_chars() {
 
 /// 中文模式下的 Shift 大写：缺省交给应用（与以前一致），配成 compose 才收进组句缓冲区。
 #[test]
-fn shift_letters_follow_the_configuration() {
-    // 缺省 `shift_letter = "passthrough"`：临时打英文，字母归应用
+fn shift_letters_enter_the_buffer_as_verbatim_segments() {
+    // 大写字母统一进组句缓冲区作为原样段，不再按 shift_letter 配置直通。
     let mut router = router();
-    let (outcome, commit, _) = press(&mut router, letter_with('P', SHIFT));
-    assert_eq!(outcome, KeyOutcome::Passthrough);
-    assert_eq!(commit, None);
-
-    // 配成 compose：进组句、按小写参与匹配，拼音行按敲的样子显示，回车原样上屏时还原大写
-    let config = RouterConfig {
-        shift_letter_compose: true,
-        ..RouterConfig::default()
-    };
-    let mut router = router_with(config);
+    let (outcome, commit, frame) = press(&mut router, letter_with('P', SHIFT));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert_eq!(preedit(&frame), "P");
+    let (_, commit, _) = press(&mut router, function_key(0x0D));
+    assert_eq!(commit.as_deref(), Some("P"));
+    // 组句中夹大写：进缓冲区、拼音行保留大写，回车上整段。
     type_letters(&mut router, "ni");
-    let (outcome, commit, frame) = press(&mut router, letter_with('A', SHIFT));
-    assert_eq!((outcome, commit.as_deref()), (KeyOutcome::Consumed, None));
+    let (outcome, _, frame) = press(&mut router, letter_with('A', SHIFT));
+    assert_eq!(outcome, KeyOutcome::Consumed);
     assert_eq!(preedit(&frame), "niA");
     let (_, commit, _) = press(&mut router, function_key(0x0D));
     assert_eq!(commit.as_deref(), Some("niA"));

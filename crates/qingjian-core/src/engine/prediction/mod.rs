@@ -68,9 +68,12 @@ impl Engine {
             None => (String::new(), String::new()),
         };
         let scope = self.composition.scope();
+        // 含句内标点 / 大写片段的混合串要照常翻译，它不是要直通的 raw 英文段；
+        // 其余 raw（`no-way`）与表达式、英文模式一样不发。
         if self.english_mode
             || self.modes().is_expression(scope, self.zhuyin)
-            || is_raw(scope, self.modes(), self.shuangpin, self.zhuyin)
+            || (is_raw(scope, self.modes(), self.shuangpin, self.zhuyin)
+                && !super::query::mixed::is_mixed_scope(scope))
         {
             return None;
         }
@@ -99,18 +102,30 @@ impl Engine {
         if letters < MIN_PREDICTION_LETTERS {
             return None;
         }
-        let (pinyin, syllables, guess, abbreviated) = match segment_longest_prefix(pinyin_source) {
-            Ok((segmentations, tail)) => {
-                let best = segmentations.first();
+        let (pinyin, syllables, guess, abbreviated) =
+            if super::query::mixed::is_mixed_scope(pinyin_source) {
+                // 混合串：本地按「拼音段转中文 + 标点 + 大写原样」拼整句，作为 guess 送翻译
+                let candidate = self.mixed_sentence_candidate(pinyin_source);
                 (
-                    query::join_marked(&segmentations, tail),
-                    best.map_or(0, |s| s.syllables.len()),
-                    self.local_guess(&segmentations),
-                    best.is_some_and(mostly_abbreviated),
+                    pinyin_source.to_owned(),
+                    candidate.syllables.len(),
+                    candidate.text,
+                    false,
                 )
-            }
-            Err(_) => (pinyin_source.to_owned(), 0, String::new(), false),
-        };
+            } else {
+                match segment_longest_prefix(pinyin_source) {
+                    Ok((segmentations, tail)) => {
+                        let best = segmentations.first();
+                        (
+                            query::join_marked(&segmentations, tail),
+                            best.map_or(0, |s| s.syllables.len()),
+                            self.local_guess(&segmentations),
+                            best.is_some_and(mostly_abbreviated),
+                        )
+                    }
+                    Err(_) => (pinyin_source.to_owned(), 0, String::new(), false),
+                }
+            };
         if question {
             self.last_question_guess = guess.clone();
         }

@@ -67,6 +67,29 @@ fn question_mode_asks_the_cloud_and_shows_answers_unvalidated() {
 }
 
 #[test]
+fn mixed_sentence_guess_keeps_punctuation_and_verbatim_for_translation() {
+    let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let predictor = EchoPredictor {
+        submitted: submitted.clone(),
+        replies: Vec::new(),
+        sentence: true,
+    };
+    let dictionary =
+        Dictionary::parse("我爱\two ai\t9000\n东西\tdong xi\t5000\n的\tde\t8000\n").unwrap();
+    let mut engine = Engine::new(dictionary).with_predictor(Box::new(predictor));
+    // woaiPGdedongxi：大写 PG 原样、前后拼音转中文，guess 整句送翻译
+    engine.set_input("woaiPGdedongxi");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), Some(1));
+    assert_eq!(submitted.borrow()[0].guess, "我爱PG的东西");
+    // 句内标点也留在 guess 里，不被当成 raw 英文段拦下
+    engine.set_input("woai,dongxi");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), Some(2));
+    assert_eq!(submitted.borrow()[1].guess, "我爱，东西");
+}
+
+#[test]
 fn prediction_request_trims_context_and_only_fires_while_composing() {
     let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let mut engine = engine().with_predictor(Box::new(EchoPredictor {
