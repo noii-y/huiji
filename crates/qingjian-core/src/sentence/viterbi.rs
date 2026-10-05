@@ -470,10 +470,10 @@ mod tests {
         let mut patterns = complete(&["wo", "xiang"]);
         patterns.push(vec![SyllablePattern::prefix("ka")]);
         assert_eq!(unigram(&dictionary, &patterns).unwrap().text, "我想开");
-        // 全拼句子末尾的单字母多半是没打完的音节，不参与
+        // 对齐微软拼音：末尾单字母也展开成最可能的音节，而不是丢掉
         let mut patterns = complete(&["wo", "xiang"]);
         patterns.push(vec![SyllablePattern::prefix("k")]);
-        assert_eq!(unigram(&dictionary, &patterns).unwrap().text, "我想");
+        assert_eq!(unigram(&dictionary, &patterns).unwrap().text, "我想开");
     }
 
     fn abbreviated<'a>(letters: &[&'a str]) -> Vec<Vec<SyllablePattern<'a>>> {

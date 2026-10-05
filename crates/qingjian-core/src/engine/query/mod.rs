@@ -6,6 +6,7 @@ mod code;
 mod converting;
 mod english_tail;
 mod generating;
+mod latin;
 mod lookup;
 pub(in crate::engine) mod mixed;
 mod modes;
@@ -14,6 +15,7 @@ mod result;
 mod snapshot;
 
 pub(crate) use english_tail::EnglishTail;
+pub(super) use latin::Latin;
 pub use result::Query;
 pub(super) use result::join_marked;
 pub(super) use result::join_marked_typed;

@@ -211,6 +211,15 @@ impl Engine {
             self.insert_shortcuts(&mut items, keys);
             self.insert_emoji(&mut items);
         }
+        // 整串其实是拉丁词（linux、hello）或切不成拼音的生僻串：补拉丁候选。
+        // 双拼、辅码态、已经切成「拼音头 + 英文尾」的不在此重复处理。
+        if aux_code.is_none() && decoded.is_none() && english_tail.is_none() {
+            match self.latin_match(keys) {
+                Latin::First(candidate) => items.insert(0, candidate),
+                Latin::AfterFirst(candidate) => items.insert(items.len().min(1), candidate),
+                Latin::None => {}
+            }
+        }
         let rank = start.elapsed();
 
         // 按头段算时英文尾段不参与拼音候选，显示上跟在切分后面：`wo'xiang'xue'hao'rust`

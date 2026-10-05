@@ -24,18 +24,12 @@ fn english_mode_lists_words_that_do_not_segment_as_pinyin() {
     assert_eq!(engine.commit(&word), "GitHub");
     assert!(engine.composition().is_empty());
 
-    // 回到中文模式：同一串不再给英文候选，要打英文得切英文模式
+    // 回到中文模式：切不成拼音的已知拉丁词现在直接列出（灰迹新增），不必为它切英文模式
     engine.set_english_mode(false);
     engine.set_input("github");
-    assert!(
-        engine
-            .query()
-            .unwrap()
-            .candidates
-            .items
-            .iter()
-            .all(|c| c.kind != CandidateKind::English)
-    );
+    let items = engine.query().unwrap().candidates.items;
+    assert_eq!(items[0].text, "GitHub");
+    assert_eq!(items[0].kind, CandidateKind::English);
 }
 
 #[test]
@@ -513,4 +507,77 @@ fn a_long_raw_commit_with_english_in_the_middle_is_not_learned() {
         vec!["kubectl".to_owned()],
         "只有真正像一个词的才该进个人英文词表"
     );
+}
+
+/// 中文模式下，整串切不成拼音的拉丁词排第一，空格直接上（专名 Linux、普通词 hello 都给）。
+#[test]
+fn whole_latin_word_ranks_first_in_chinese_mode() {
+    let words = WordList::parse("Linux\tlinux\t3990\nhello\thello\t4720\nhe\the\t4000\n").unwrap();
+    let mut engine = engine().with_english(words);
+
+    engine.set_input("linux");
+    let query = engine.query().unwrap();
+    let first = query.candidates.items[0].clone();
+    assert_eq!(first.text, "Linux");
+    assert_eq!(first.kind, CandidateKind::English);
+    assert_eq!(engine.commit(&first), "Linux");
+    assert!(engine.composition().is_empty());
+
+    // 切不成拼音的普通英文词同样排第一
+    engine.set_input("hello");
+    assert_eq!(texts_of(&engine)[0], "hello");
+}
+
+/// 整串也切得成拼音、但是专有名词时：首选仍是中文，专名紧随其后（`beijing` → 北京、Beijing）。
+#[test]
+fn proper_noun_follows_the_first_chinese_candidate() {
+    const DICT: &str = "北京\tbei jing\t50000\n";
+    let words = WordList::parse("Beijing\tbeijing\t4500\n").unwrap();
+    let mut engine = Engine::new(Dictionary::parse(DICT).unwrap()).with_english(words);
+
+    engine.set_input("beijing");
+    let items = engine.query().unwrap().candidates.items;
+    assert_eq!(items[0].text, "北京");
+    assert_eq!(items[1].text, "Beijing");
+    assert_eq!(items[1].kind, CandidateKind::English);
+}
+
+/// 整串切得成拼音时，普通词和专名之外不给拉丁候选（`he` 是普通词 → 不列出）。
+#[test]
+fn ordinary_segmentable_word_is_not_listed_as_latin() {
+    {
+        let words = WordList::parse("he\the\t4000\n").unwrap();
+        let mut engine = engine().with_english(words);
+        engine.set_input("he");
+        assert!(
+            engine
+                .query()
+                .unwrap()
+                .candidates
+                .items
+                .iter()
+                .all(|c| c.kind != CandidateKind::English)
+        );
+    }
+
+    // 切不成拼音、词表也没有的生僻串（qwx）不造候选：回车原样上屏
+    let mut engine = engine();
+    engine.set_input("qwx");
+    assert!(engine.query().unwrap().candidates.items.is_empty());
+    assert_eq!(engine.take_raw(), "qwx");
+}
+/// 末尾只敲一个声母也展开：给音节数对齐的三音节短语，四音节成语不再霸着首选（对齐微软拼音）。
+#[test]
+fn trailing_single_initial_expands_to_a_count_aligned_phrase() {
+    const DICT: &str = "不\tbu\t900000\n知\tzhi\t800000\n只\tzhi\t5000\n止\tzhi\t1000\n\
+        是\tshi\t900000\n所\tsuo\t5000\n措\tcuo\t500\n不知所措\tbu zhi suo cuo\t150000\n";
+    let mut engine = Engine::new(Dictionary::parse(DICT).unwrap());
+
+    engine.set_input("buzhis");
+    let items = engine.query().unwrap().candidates.items;
+    // 首选是三音节、与输入音节数对齐的短语，不再是四音节成语
+    assert_ne!(items[0].text, "不知所措");
+    assert_eq!(items[0].syllables.len(), 3);
+    // 成语仍在列表里，想选还能选到
+    assert!(items.iter().any(|c| c.text == "不知所措"));
 }

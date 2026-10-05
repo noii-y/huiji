@@ -50,6 +50,11 @@ pub const CONFIDENCE_K: f64 = 8.0;
 /// 个人插值权重的封顶：用户数据再多，没见过的接续也最多打这个折，保留说新话的余地。
 pub const MAX_CONFIDENCE: f64 = 0.5;
 
+/// 句首位置个人数据的权重上限。句首没有真正的上文，最可靠的是词的全局频率（静态模型）；
+/// 个人"最近爱用什么开头"多半是短期话题噪声——做品牌那几天反复以同一个字开头，
+/// 个人一元会把它抬到反常的高位。所以句首只给个人数据很小一票，让常用虚词（会）不被生僻字（灰）盖掉。
+pub const START_MAX_CONFIDENCE: f64 = 0.15;
+
 /// 个人三元的绝对折扣 D：每条见过的三元接续让出 D 份概率给二元回退，见得少的上文回退得多。
 /// 0.75 是 n-gram 平滑的惯用值，个人数据量小、一次见过的接续占多数时它决定了三元能压过二元多少。
 pub const TRIGRAM_DISCOUNT: f64 = 0.75;
@@ -60,8 +65,10 @@ pub const MAX_USER_TRANSITIONS: usize = 200_000;
 /// 一个词最多几个音节；更长的词库里有但极少，限制它让词图规模可控。
 pub const MAX_WORD_SYLLABLES: usize = 8;
 
-/// 末尾未打完的音节至少要几个字母才参与整句：单个字母的前缀范围太大（`s` 匹配所有 s 开头的音节），不值得扫。
-pub const MIN_PARTIAL_LETTERS: usize = 2;
+/// 末尾未打完的音节至少要几个字母才参与整句。
+/// 微软拼音里一个声母（`buzhis` 末尾的 `s`）也会展开、靠语言模型选音节数对齐的短语，所以收到 1；
+/// 单声母的格子按简拼留词（[`ABBREVIATED_SPAN_CANDIDATES`]），且它在末尾、不再向后扩展，代价可控。
+pub const MIN_PARTIAL_LETTERS: usize = 1;
 
 /// 每个格子最多留几个词（按词库词频 + 用户加分）。同音词很多，全留会让束搜索白费。
 pub const SPAN_CANDIDATES: usize = 6;

@@ -219,9 +219,9 @@ fn sentence_conversion_leads_when_input_spans_several_words() {
     assert_eq!(all[0], "开发");
     assert_eq!(all.iter().filter(|t| *t == "开发").count(), 1);
 
-    // 末尾只有一个字母时整句不算它：xiangkaif → 想开
+    // 末尾只有一个字母也展开（对齐微软拼音）：xiangkaif → 想开放
     let all = texts("xiangkaif");
-    assert_eq!(all[0], "想开");
+    assert_eq!(all[0], "想开放");
 }
 
 #[test]

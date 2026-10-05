@@ -77,6 +77,15 @@ impl Engine {
         {
             return None;
         }
+        // 整串是一个切不成拼音的拉丁词（linux、hello）：没有中文要译，也不发整句补全
+        if !parser::is_fully_segmentable(scope)
+            && self
+                .english
+                .as_ref()
+                .is_some_and(|words| words.get(scope).is_some())
+        {
+            return None;
+        }
         // 问字模式：问题本身就是全部上下文，不带应用文本、不要整句、本地没有候选可提示
         let question = self.modes().is_question(scope, self.zhuyin);
         if question

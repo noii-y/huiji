@@ -1,6 +1,6 @@
 use foldhash::{HashMap, HashMapExt};
 
-use super::{Context, Interpolation, MAX_USER_TRANSITIONS, SENTENCE_START};
+use super::{Context, Interpolation, MAX_USER_TRANSITIONS, SENTENCE_START, START_MAX_CONFIDENCE};
 
 /// 个人 n-gram：用户上屏过的词序列计数（二元 + 三元），随上屏在线更新，进整句转换与词级排序的打分。
 ///
@@ -257,6 +257,12 @@ impl UserNgram {
         let confidence = (f64::from(context_total)
             / (f64::from(context_total) + interpolation.confidence_k))
             .min(interpolation.max_confidence);
+        // 句首：个人数据只留很小一票，避免短期话题把常用虚词盖成生僻字
+        let confidence = if context.previous.is_none() {
+            confidence.min(START_MAX_CONFIDENCE)
+        } else {
+            confidence
+        };
         let blended = (1.0 - confidence) * base_log_prob.exp() + confidence * personal;
         blended.max(f64::MIN_POSITIVE).ln()
     }
@@ -545,6 +551,46 @@ mod tests {
         assert!(
             discounted
                 > base_ba_particle + (1.0 - Interpolation::DEFAULT.max_confidence).ln() - 1e-9
+        );
+    }
+
+    /// 句首即便上下文量很大，个人权重也压到 `START_MAX_CONFIDENCE`，而不是一般位置的 0.5。
+    #[test]
+    fn sentence_start_caps_personal_weight_even_with_large_context() {
+        let mut model = UserNgram::default();
+        for _ in 0..100 {
+            model.record(Context::START, "甲");
+        }
+        model.record(Context::START, "乙");
+        let base = -3.0_f64;
+        let blended = model.blend(Context::START, "乙", base, &Interpolation::DEFAULT);
+        // 个人概率：乙 1 次 / 句首 101 次（bigram 与一元同值）
+        let personal = 1.0 / 101.0;
+        let cap = crate::sentence::START_MAX_CONFIDENCE;
+        let expected = ((1.0 - cap) * base.exp() + cap * personal)
+            .max(f64::MIN_POSITIVE)
+            .ln();
+        assert!((blended - expected).abs() < 1e-9, "{blended} vs {expected}");
+    }
+
+    /// 句首的短期话题（做品牌反复以「灰」开头）不该盖过静态模型认定的常用词「会」。
+    #[test]
+    fn sentence_start_temporary_topic_does_not_override_common_word() {
+        let mut model = UserNgram::default();
+        for i in 0..400 {
+            model.record(Context::START, &format!("词{i}"));
+        }
+        for _ in 0..7 {
+            model.record(Context::START, "灰");
+        }
+        for _ in 0..2 {
+            model.record(Context::START, "会");
+        }
+        let score_hui = model.blend(Context::START, "会", -5.0, &Interpolation::DEFAULT);
+        let score_hui2 = model.blend(Context::START, "灰", -11.0, &Interpolation::DEFAULT);
+        assert!(
+            score_hui > score_hui2,
+            "会 {score_hui} 应压过 灰 {score_hui2}"
         );
     }
 
