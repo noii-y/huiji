@@ -3,6 +3,8 @@
 
 #[cfg(windows)]
 pub mod pipe;
+#[cfg(windows)]
+mod router_watchdog;
 mod work;
 
 pub use qingjian_platform::protocol::{CodecError, read_message, write_message};

@@ -15,7 +15,7 @@ pub(super) const PING_INTERVAL: Duration = Duration::from_secs(2);
 pub(super) const DEAD_THRESHOLD: Duration = Duration::from_secs(6);
 
 /// Server 被看门狗结束时的退出码（非 0，便于日后排查日志）。
-pub(super) const WATCHDOG_EXIT_CODE: i32 = 77;
+pub(crate) const WATCHDOG_EXIT_CODE: i32 = 77;
 
 /// 当前时间的 Unix 毫秒；系统时钟异常（早于 1970）时返回 0。
 pub(super) fn now_millis() -> u64 {

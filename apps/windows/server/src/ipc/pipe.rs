@@ -57,6 +57,8 @@ pub fn serve_pipe(
         Err(error) => return Err(error),
     };
     thread::spawn(move || accept_loop(&pipe, first, sender));
+    // 路由循环看门狗：独立线程探测主循环是否还在应答，卡死时结束本进程让 TSF 重拉。
+    super::router_watchdog::spawn(name.to_string());
     tracing::info!(pipe = name, "命名管道监听中");
     // 按 Router 的节拍来 tick：在等本地整句模型就几十毫秒一次，否则一秒看一次配置文件。
     // 到点时间是绝对的，不随消息重新计时——前台进程里的 DLL 隔几百毫秒就问一次切模式（SyncMode），

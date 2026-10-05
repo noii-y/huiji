@@ -10,7 +10,7 @@ mod layered;
 mod monitor;
 mod painter;
 mod status;
-mod watchdog;
+pub(crate) mod watchdog;
 mod window_class;
 
 use std::cell::RefCell;
