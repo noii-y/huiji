@@ -363,6 +363,28 @@ impl LanguageModel for BaModel {
     }
 }
 
+/// 纯缩写排序用的假模型：一元把「手机」排前，句首二元（`log_prob(None)`）却把「世纪」排前，
+/// 用来验证纯缩写走一元先验，而不是语域偏置的句首二元。
+struct AbbrModel;
+
+impl LanguageModel for AbbrModel {
+    fn log_prob(&self, previous: Option<&str>, word: &str) -> Option<f64> {
+        match (previous, word) {
+            (None, "世纪") => Some(-1.0),
+            (None, "手机") => Some(-8.0),
+            _ => None,
+        }
+    }
+
+    fn unigram_log_prob(&self, word: &str) -> Option<f64> {
+        match word {
+            "手机" => Some(-2.0),
+            "世纪" => Some(-5.0),
+            _ => None,
+        }
+    }
+}
+
 fn texts_of(engine: &Engine) -> Vec<String> {
     engine
         .query()

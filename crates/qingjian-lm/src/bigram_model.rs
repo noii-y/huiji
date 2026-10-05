@@ -259,6 +259,35 @@ impl BigramModel {
             .ok()
             .map(|index| successors[index].count)
     }
+
+    /// 反向导出成 [`Self::parse`] 能读回的两个 TSV（一元、二元），
+    /// 用于在已打包的模型上替换一元先验、再重标定二元（见 `tools/corpus/chinese_frequency.py`）。
+    pub fn to_tsv(&self) -> (String, String) {
+        let mut unigram = String::new();
+        for entry in self.entries.iter() {
+            let word = word_text(&self.words, entry);
+            unigram.push_str(word);
+            unigram.push('\t');
+            unigram.push_str(&entry.count.to_string());
+            unigram.push('\n');
+        }
+        let mut bigram = String::new();
+        for prev in 0..self.entries.len() {
+            let start = *self.offsets.get(prev).unwrap_or(&0) as usize;
+            let end = *self.offsets.get(prev + 1).unwrap_or(&0) as usize;
+            for successor in &self.successors[start..end] {
+                let first = word_text(&self.words, &self.entries[prev]);
+                let second = word_text(&self.words, &self.entries[successor.word as usize]);
+                bigram.push_str(first);
+                bigram.push('\t');
+                bigram.push_str(second);
+                bigram.push('\t');
+                bigram.push_str(&successor.count.to_string());
+                bigram.push('\n');
+            }
+        }
+        (unigram, bigram)
+    }
 }
 
 /// 条目对应的词。
@@ -303,6 +332,15 @@ impl LanguageModel for BigramModel {
             _ => unigram,
         };
         Some(probability.max(f64::MIN_POSITIVE).ln())
+    }
+
+    fn unigram_log_prob(&self, word: &str) -> Option<f64> {
+        let id = self.word_id(word)?;
+        let count = f64::from(self.entries[id as usize].count);
+        if count <= 0.0 {
+            return None;
+        }
+        Some((count / self.total).ln())
     }
 }
 

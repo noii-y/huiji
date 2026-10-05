@@ -422,3 +422,25 @@ fn option_arrows_move_the_cursor_by_syllable() {
     assert!(engine.move_cursor_syllable_right());
     assert_eq!(engine.composition().cursor(), "hello".len());
 }
+
+#[test]
+fn pure_abbreviation_ranks_by_unigram_instead_of_sentence_start_bigram() {
+    let dictionary = Dictionary::parse("手机\tshou ji\t100\n世纪\tshi ji\t100\n").unwrap();
+    let mut engine = Engine::new(dictionary).with_language_model(Box::new(AbbrModel));
+    // 纯声母缩写：一元把 手机 排前；若误走句首二元，模型给的是 世纪 第一
+    engine.set_input("sj");
+    let all = texts_of(&engine);
+    assert_eq!(all[0], "手机");
+    // V 模式时间候选会插在中间，世纪落在它们之后
+    assert!(all.iter().take(6).any(|text| text == "世纪"));
+}
+
+#[test]
+fn partially_spelled_input_does_not_use_the_abbreviation_unigram_branch() {
+    // 一个完整音节 + 一个声母（shi'j）不算纯缩写，仍走上下文二元：AbbrModel 对它返回 None，
+    // 两个词频相同按词库兜底，不应因一元分叉把 手机 强行提前。
+    let dictionary = Dictionary::parse("手机\tshou ji\t100\n世纪\tshi ji\t100\n").unwrap();
+    let mut engine = Engine::new(dictionary).with_language_model(Box::new(AbbrModel));
+    engine.set_input("shij");
+    assert!(texts_of(&engine).iter().any(|text| text == "世纪"));
+}

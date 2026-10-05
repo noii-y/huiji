@@ -76,6 +76,16 @@ impl Engine {
             Some(c) => (vec![c.segmentation.clone()], ""),
             None => (segmentations, tail),
         };
+        // 整串都是单声母（`sj`、`xx`）且没有未切分尾巴：纯缩写。它的候选排序按一元先验，
+        // 不走路透社偏置的句首二元（见 ranking 闭包）；用户在该缩写下选过的词仍由 choice 提权。
+        let fully_abbreviated = tail.is_empty()
+            && segmentations.iter().any(|seg| {
+                !seg.syllables.is_empty()
+                    && seg
+                        .syllables
+                        .iter()
+                        .all(|s| !s.complete && s.text.len() == 1)
+            });
         let parse = start.elapsed();
 
         let start = Instant::now();
@@ -153,13 +163,21 @@ impl Engine {
             let choice = letters
                 .get(..covered)
                 .map_or(0, |input| self.learner.choice_weight(input, hit.text));
-            let log_prob = sentence::transition_log_prob(
-                &*self.language_model,
-                self.personal(),
-                self.chain.context(),
-                hit.text,
-                sentence::fallback_log_prob(hit.frequency, log_total),
-            );
+            let log_prob = if fully_abbreviated {
+                // 纯缩写：按一元先验（wordfreq，多语域），跳过上下文二元与个人 ngram 插值；
+                // 个人在该缩写下的偏好已通过上面的 choice 与候选 weight 提权。
+                self.language_model
+                    .unigram_log_prob(hit.text)
+                    .unwrap_or_else(|| sentence::fallback_log_prob(hit.frequency, log_total))
+            } else {
+                sentence::transition_log_prob(
+                    &*self.language_model,
+                    self.personal(),
+                    self.chain.context(),
+                    hit.text,
+                    sentence::fallback_log_prob(hit.frequency, log_total),
+                )
+            };
             (choice, log_prob)
         });
         // 辅码态：词库候选按码段**反向**过滤（逐个问「有没有以码段开头的码」），无码词直接隐藏；
