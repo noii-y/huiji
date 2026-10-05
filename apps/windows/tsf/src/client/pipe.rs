@@ -8,7 +8,7 @@ use windows::Win32::Foundation::ERROR_PIPE_BUSY;
 use windows::Win32::System::Pipes::WaitNamedPipeW;
 use windows::core::HSTRING;
 
-use qingjian_platform::protocol::DEFAULT_PIPE_NAME;
+use qingjian_platform::protocol::session_pipe_name;
 
 /// 连好的命名管道。对端关闭时读到 EOF；`flush` 是空操作（管道上 `FlushFileBuffers` 会阻塞到对端读完）。
 pub type PipeStream = File;
@@ -17,8 +17,21 @@ pub type PipeStream = File;
 const BUSY_WAIT_MS: u32 = 300;
 const BUSY_RETRIES: u32 = 1;
 
+/// 当前进程所在的终端服务会话 id。DLL 与它拉起的 Server 同会话，用它拼同一个会话管道名。
+pub(crate) fn current_session_id() -> u32 {
+    let mut session = 0u32;
+    let _ = unsafe {
+        windows::Win32::System::RemoteDesktop::ProcessIdToSessionId(
+            windows::Win32::System::Threading::GetCurrentProcessId(),
+            &mut session,
+        )
+    };
+    session
+}
+
 pub fn connect_default() -> io::Result<PipeStream> {
-    connect(DEFAULT_PIPE_NAME)
+    // 连本会话专属管道：别的会话即使先起了 Server，也不会让本会话连到窗口画在别处的实例。
+    connect(&session_pipe_name(current_session_id()))
 }
 
 pub fn connect(name: &str) -> io::Result<PipeStream> {

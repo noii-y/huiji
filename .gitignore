@@ -9,3 +9,6 @@
 
 # 灰迹：端侧模型体积大，不入库（按评测文档的来源自行下载）
 huiji/models/
+
+# 浸泡测试的运行产物（截图 / 结果 JSON），脚本在 huiji/tools
+huiji/评测/soak/

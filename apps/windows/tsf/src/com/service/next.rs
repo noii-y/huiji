@@ -20,8 +20,8 @@ pub(super) enum Next {
         request: u64,
     },
 
-    /// 转发出错、已断连：放行本键。
-    Abort,
+    /// 转发出错、已断连：有界等待重连后重发本键；等不到再放行。
+    Reconnect,
 
     /// Server 无响应（请求超时），已重启 Server：本键按「连不上 Server」兜底（拼音字母吃掉、其余放行）。
     Restarted,

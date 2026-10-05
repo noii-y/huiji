@@ -42,6 +42,9 @@ pub(crate) type SharedClient = Rc<RefCell<Option<EngineClient<PipeStream>>>>;
 /// 连不上 Server 后隔多久再试（每次尝试都在应用的 UI 线程上，不能每键都试）。
 const RECONNECT_INTERVAL: Duration = Duration::from_secs(2);
 
+/// 按键路径上等待刚拉起的 Server 就绪的最长时间。Server 约 1 秒内监听管道，留一倍余量。
+pub(super) const RECONNECT_WAIT: Duration = Duration::from_secs(2);
+
 /// 一个 TSF 文本服务实例（每线程一个）。
 #[implement(ITfTextInputProcessor, ITfKeyEventSink, ITfDisplayAttributeProvider)]
 pub struct TextService {

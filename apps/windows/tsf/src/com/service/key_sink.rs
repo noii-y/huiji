@@ -9,6 +9,7 @@ use windows::core::{BOOL, GUID, Ref, Result};
 
 use qingjian_platform::protocol::{KeyEvent, KeyOutcome};
 
+use super::RECONNECT_WAIT;
 use super::TextService_Impl;
 use super::launch;
 use super::next::Next;
@@ -168,10 +169,16 @@ impl TextService_Impl {
 
     /// 把按键送给 Server 并按结果更新文档；返回吃不吃。
     fn forward_key(&self, pic: Ref<ITfContext>, event: KeyEvent) -> bool {
-        // 没连上 Server（没起、刚重启、转发失败后的退避期）：只吃「可能是在打拼音」的键，
-        // 别让拼音字母漏进应用；标点 / 数字 / 英文与 Caps 下的字母本来就会原样交给应用，
-        // 这里放行——一律吃掉会表现为「按了没反应」（连不上时按 `-`、数字都没反应）。
-        if !self.ensure_connected() {
+        self.forward_key_retry(pic, event, 1)
+    }
+
+    /// 实际转发，`retries` 是断连后还允许重发几次（防止重连仍失败时无限递归）。
+    fn forward_key_retry(&self, pic: Ref<ITfContext>, event: KeyEvent, retries: u32) -> bool {
+        // 没连上 Server（没起、刚重启、转发失败后的退避期）：先有界等一下刚拉起的 Server，
+        // 避免启动窗口里「首字母漏进文档、后续键被吞」；等不到再按无 Server 兜底——
+        // 只吃「可能是在打拼音」的字母，标点 / 数字 / 英文与 Caps 下的字母放行，
+        // 一律吃掉会表现为「按了没反应」。
+        if !self.ensure_connected() && !self.connect_within(RECONNECT_WAIT) {
             let eat = eats_without_server(&event);
             if eat {
                 log(&format!(
@@ -244,14 +251,15 @@ impl TextService_Impl {
                         if restarted {
                             Next::Restarted
                         } else {
-                            Next::Abort
+                            // 重启没请求成功：仍走有界等待（可能别的进程正在拉起），等不到再放行。
+                            Next::Reconnect
                         }
                     } else {
-                        log(&format!("转发按键失败，放行并断开，下一键重连: {error}"));
+                        log(&format!("转发按键失败，断开并等待重连后重发: {error}"));
                         *guard = None;
                         self.last_connect_failure.set(None);
                         self.shared.end_composing();
-                        Next::Abort
+                        Next::Reconnect
                     }
                 }
             }
@@ -296,7 +304,14 @@ impl TextService_Impl {
             }
             // Server 刚重启：本键按无 Server 兜底（拼音字母吃掉防漏进文档，标点 / 数字放行）。
             (Next::Restarted, _) => eats_without_server(&event),
-            (Next::Abort, _) => false,
+            // 断连：有界等重连，连上后重发本键；等不到或已重试过则放行。
+            (Next::Reconnect, _) => {
+                if retries > 0 && self.connect_within(RECONNECT_WAIT) {
+                    self.forward_key_retry(pic, event, retries - 1)
+                } else {
+                    false
+                }
+            }
         }
     }
 }

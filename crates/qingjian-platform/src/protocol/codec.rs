@@ -9,6 +9,16 @@ use serde::de::DeserializeOwned;
 /// 缺省命名管道名。Server 在这上面监听，DLL 用同名连上。放这里让两端共享同一个字面量。
 pub const DEFAULT_PIPE_NAME: &str = r"\\.\pipe\qingjian";
 
+/// 按终端服务会话隔离的管道名。
+///
+/// 一个全局 Server 只能把候选窗画在它自己所在的会话；它若被另一个会话的进程拉起，本会话
+/// 就连到一个窗口画在别处的 Server，表现为「能打字、没有候选框」。管道名带上会话 id 后，
+/// 每个会话各连各的、各起各的 Server，窗口总在当前会话。
+#[must_use]
+pub fn session_pipe_name(session_id: u32) -> String {
+    format!(r"{DEFAULT_PIPE_NAME}-{session_id}")
+}
+
 /// 单帧上限，挡住坏长度前缀导致的巨量分配。
 const MAX_FRAME: u32 = 16 * 1024 * 1024;
 

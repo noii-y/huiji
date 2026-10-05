@@ -40,8 +40,9 @@ use crate::com::module_path;
 /// 同一进程内两次尝试拉起 Server 的最短间隔：连接失败每个键都会走到这里，别把应用砸出一串 Server。
 const LAUNCH_COOLDOWN: Duration = Duration::from_secs(5);
 
-/// 跨进程互斥体：多个应用的 DLL 同时发现 Server 不在时只起一个（第二个起来的抢不到管道会自己退出）。
-const LAUNCH_MUTEX: windows::core::PCWSTR = w!("Local\\QingjianServerLaunch");
+/// 跨进程互斥体名的前缀：多个应用的 DLL 同时发现 Server 不在时只起一个（第二个起来的抢不到管道会自己退出）。
+/// 完整名带上会话 id，让每个会话各自串行启动、互不阻塞。
+const LAUNCH_MUTEX_PREFIX: &str = "Local\\QingjianServerLaunch";
 
 /// 安装 / 卸载程序运行期间持有的互斥体，名字与 `qingjian.iss` 的 `HoldInstallerMutex` 一致。
 const INSTALLER_MUTEX: windows::core::PCWSTR = w!("Global\\QingjianInstaller");
@@ -113,11 +114,13 @@ pub(super) fn restart_server() -> bool {
     launch_server()
 }
 
-/// 结束所有 qingjian-server 进程。同用户、同完整性，taskkill 无需提权。杀掉后，各应用里阻塞在
-/// 等应答的读操作随管道关闭立即返回错误，下一键重连；卡死的处理线程也随之解除。
+/// 结束本会话的 qingjian-server 进程。同用户、同完整性，taskkill 无需提权。用 `SESSION eq` 过滤，
+/// 只杀当前会话的实例，不波及别的会话（每会话各有一个 Server）。杀掉后，各应用里阻塞在等应答的
+/// 读操作随管道关闭立即返回错误，下一键重连；卡死的处理线程也随之解除。
 fn kill_server() {
+    let filter = format!("SESSION eq {}", crate::client::pipe::current_session_id());
     let _ = std::process::Command::new("taskkill")
-        .args(["/f", "/im", "qingjian-server.exe"])
+        .args(["/f", "/im", "qingjian-server.exe", "/fi", &filter])
         .output();
 }
 
@@ -194,9 +197,13 @@ fn installer_running() -> bool {
     }
 }
 
-/// 跨进程互斥体；已被别的进程持有（对方正在起 Server）返回 `None`。
+/// 跨进程互斥体；已被别的进程持有（对方正在起本会话的 Server）返回 `None`。
 fn launch_mutex() -> Option<LaunchMutex> {
-    let handle = unsafe { CreateMutexW(None, false, LAUNCH_MUTEX) }.ok()?;
+    let name = HSTRING::from(format!(
+        "{LAUNCH_MUTEX_PREFIX}-{}",
+        crate::client::pipe::current_session_id()
+    ));
+    let handle = unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }.ok()?;
     if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
         let _ = unsafe { CloseHandle(handle) };
         return None;

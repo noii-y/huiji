@@ -11,6 +11,18 @@ use qingjian_windows_server::{
     AssemblySpec, LanguageModelFiles, Router, RouterConfig, ServerError, assembly, dispatch,
 };
 
+/// 当前进程所在的终端服务会话 id。Server 与同会话的 DLL 用它拼同一个会话管道名。
+fn current_session_id() -> u32 {
+    let mut session = 0u32;
+    let _ = unsafe {
+        windows::Win32::System::RemoteDesktop::ProcessIdToSessionId(
+            windows::Win32::System::Threading::GetCurrentProcessId(),
+            &mut session,
+        )
+    };
+    session
+}
+
 /// 用户数据目录 `%APPDATA%\Qingjian`。非 Windows 拿不到。
 fn user_dir() -> Option<PathBuf> {
     qingjian_platform::dirs::user_dir()
@@ -272,7 +284,8 @@ fn serve(mut router: Router) {
         }
         Err(error) => tracing::error!(%error, "UI 线程启动失败，将不显示候选框 / 状态条"),
     }
-    if let Err(error) = pipe::serve_pipe(pipe::DEFAULT_PIPE_NAME, &mut router, work_tx, work_rx) {
+    let pipe_name = qingjian_platform::protocol::session_pipe_name(current_session_id());
+    if let Err(error) = pipe::serve_pipe(&pipe_name, &mut router, work_tx, work_rx) {
         tracing::error!(%error, "命名管道服务退出");
         std::process::exit(1);
     }
