@@ -566,6 +566,27 @@ fn ordinary_segmentable_word_is_not_listed_as_latin() {
     assert!(engine.query().unwrap().candidates.items.is_empty());
     assert_eq!(engine.take_raw(), "qwx");
 }
+
+/// 纯辅音缩写即使词表里有同名的拉丁缩写专名（SJ 圣何塞），也按中文简拼处理、不给拉丁候选。
+#[test]
+fn pure_consonant_abbreviation_is_not_treated_as_latin() {
+    let words = WordList::parse("SJ\tsj\t3000\nLinux\tlinux\t3990\n").unwrap();
+    let mut engine = engine().with_english(words);
+
+    engine.set_input("sj");
+    assert!(
+        engine
+            .query()
+            .unwrap()
+            .candidates
+            .items
+            .iter()
+            .all(|c| c.kind != CandidateKind::English)
+    );
+    // 含元音的拉丁词不受影响
+    engine.set_input("linux");
+    assert_eq!(texts_of(&engine)[0], "Linux");
+}
 /// 末尾只敲一个声母也展开：给音节数对齐的三音节短语，四音节成语不再霸着首选（对齐微软拼音）。
 #[test]
 fn trailing_single_initial_expands_to_a_count_aligned_phrase() {

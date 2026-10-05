@@ -35,6 +35,14 @@ impl Engine {
         if keys.is_empty() || !keys.bytes().all(|b| b.is_ascii_lowercase()) {
             return Latin::None;
         }
+        // 不含任何元音的纯辅音串是中文声母简拼（sj、zt、ggll），不是拉丁词。
+        // 拉丁词几乎都带元音；大写缩写专名（IBM、CPU）在大写分支处理，走不到这里。
+        if !keys
+            .bytes()
+            .any(|b| matches!(b, b'a' | b'e' | b'i' | b'o' | b'u'))
+        {
+            return Latin::None;
+        }
         let fully = parser::is_fully_segmentable(keys);
         if let Some(word) = self.english.as_ref().and_then(|words| words.get(keys)) {
             let proper = word.chars().any(|c| c.is_ascii_uppercase());
