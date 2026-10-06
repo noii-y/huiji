@@ -442,3 +442,15 @@ fn shift_letters_enter_the_buffer_as_verbatim_segments() {
     let (_, commit, _) = press(&mut router, function_key(0x0D));
     assert_eq!(commit.as_deref(), Some("niA"));
 }
+
+#[test]
+fn file_manager_host_is_treated_as_private_and_does_not_learn() {
+    // explorer.exe 在缺省「不学习」名单里：首个键触发聚焦后就按私密处理。
+    let mut router = router_in_app("explorer.exe");
+    type_letters(&mut router, "n");
+    assert_eq!(router.is_private(), cfg!(windows));
+    // 普通应用不在名单里，照常学习。
+    let mut normal = router_in_app("notepad.exe");
+    type_letters(&mut normal, "n");
+    assert!(!normal.is_private());
+}

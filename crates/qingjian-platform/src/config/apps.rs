@@ -88,34 +88,78 @@ pub const DEFAULT_ENGLISH_CANDIDATES_OFF: &[&str] = DEFAULT_ENGLISH_CANDIDATES_O
 #[cfg(not(any(windows, target_os = "macos")))]
 pub const DEFAULT_ENGLISH_CANDIDATES_OFF: &[&str] = DEFAULT_ENGLISH_CANDIDATES_OFF_LINUX;
 
+/// 缺省不做学习的应用（Windows，按 exe 名）。桌面图标改名、资源管理器地址栏 / 搜索框都在 explorer.exe 里，
+/// 打进去的多是文件名、路径，记进个人词频和 n-gram 会把排序带偏，这些地方干脆不学。
+pub const DEFAULT_LEARNING_OFF_WINDOWS: &[&str] = &["explorer.exe"];
+
+/// 缺省不做学习的应用（macOS）：访达里的文件 / 路径搜索，理由同 Windows。
+pub const DEFAULT_LEARNING_OFF_MACOS: &[&str] = &["com.apple.finder"];
+
+/// Linux 下文件管理器种类多、program 名不统一，缺省名单留空，需要的用户自己加。
+pub const DEFAULT_LEARNING_OFF_LINUX: &[&str] = &[];
+
+#[cfg(windows)]
+pub const DEFAULT_LEARNING_OFF: &[&str] = DEFAULT_LEARNING_OFF_WINDOWS;
+
+#[cfg(target_os = "macos")]
+pub const DEFAULT_LEARNING_OFF: &[&str] = DEFAULT_LEARNING_OFF_MACOS;
+
+#[cfg(not(any(windows, target_os = "macos")))]
+pub const DEFAULT_LEARNING_OFF: &[&str] = DEFAULT_LEARNING_OFF_LINUX;
+
 /// 配置文件 `[apps]` 分节：按应用改行为。应用的标识 macOS 上是 bundle identifier，Windows 上是宿主进程的 exe 文件名。
 ///
-/// 现在只有一项：哪些应用里英文模式不给候选（纯直通）。以后按应用定 preedit 模式等也放这里。
+/// 两项：哪些应用里英文模式不给候选（纯直通）；哪些应用里不做学习（不记个人词频 / n-gram / 选择）。
+/// 以后按应用定 preedit 模式等也放这里。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppsConfig {
     /// 英文模式（Caps Lock）下不给候选的应用。条目是 bundle identifier（`com.jetbrains.*`）或 exe 文件名（`Code.exe`），
     /// `*` 结尾按前缀匹配。全局开关 `[general] english_candidates` 关着时这里不起作用。
     pub english_candidates_off: Vec<String>,
+
+    /// 不做学习的应用。这些宿主里的上屏不记个人词频、n-gram、选择次数，也不发云端（按私密输入处理）。
+    /// 用来挡住文件管理器 / 桌面这类会打进文件名、路径的地方。
+    pub learning_off: Vec<String>,
 }
 
 impl Default for AppsConfig {
     fn default() -> Self {
-        Self::with_english_candidates_off(DEFAULT_ENGLISH_CANDIDATES_OFF)
+        Self {
+            english_candidates_off: DEFAULT_ENGLISH_CANDIDATES_OFF
+                .iter()
+                .map(|s| (*s).to_owned())
+                .collect(),
+            learning_off: DEFAULT_LEARNING_OFF
+                .iter()
+                .map(|s| (*s).to_owned())
+                .collect(),
+        }
     }
 }
 
 impl AppsConfig {
-    /// 用给定名单构造（缺省名单分平台，测试里要指定哪一份）。
+    /// 用给定英文候选名单构造（缺省名单分平台，测试里要指定哪一份），学习名单走缺省。
     pub fn with_english_candidates_off(apps: &[&str]) -> Self {
         Self {
             english_candidates_off: apps.iter().map(|s| (*s).to_owned()).collect(),
+            learning_off: DEFAULT_LEARNING_OFF
+                .iter()
+                .map(|s| (*s).to_owned())
+                .collect(),
         }
     }
 
     /// 这个应用里英文模式要不要关掉候选。`app` 不认识（应用没给）按不关。
     pub fn english_candidates_off(&self, app: &str) -> bool {
         self.english_candidates_off
+            .iter()
+            .any(|pattern| matches_app(pattern, app))
+    }
+
+    /// 这个应用里要不要做学习。`app` 不认识（应用没给）按照常学习。
+    pub fn learning_off(&self, app: &str) -> bool {
+        self.learning_off
             .iter()
             .any(|pattern| matches_app(pattern, app))
     }
@@ -219,6 +263,21 @@ mod tests {
         let apps: AppsConfig = toml::from_str("english_candidates_off = []").unwrap();
         assert!(!apps.has_english_candidates_off());
         assert!(!apps.english_candidates_off("com.apple.Terminal"));
+    }
+
+    #[test]
+    fn learning_off_matches_listed_apps_and_defaults_to_file_managers() {
+        // 自定义名单能匹配，未列出的照常学习
+        let apps: AppsConfig =
+            toml::from_str("learning_off = [\"explorer.exe\", \"term-*\"]").unwrap();
+        assert!(apps.learning_off("explorer.exe"));
+        assert!(apps.learning_off("term-a"));
+        assert!(!apps.learning_off("notepad.exe"));
+        // 缺省名单在 Windows 上包含 explorer.exe
+        assert_eq!(
+            AppsConfig::default().learning_off("explorer.exe"),
+            cfg!(windows)
+        );
     }
 
     #[test]

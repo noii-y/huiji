@@ -25,9 +25,14 @@ impl Router {
             self.focused = Some(session);
             let app = self.focused_app().map(str::to_owned);
             self.engine.set_application(app);
-            let private = self.focused_private();
-            self.engine.set_private(private);
+            self.engine.set_private(self.effective_private());
         }
+    }
+
+    /// 当前聚焦会话是否按私密处理：输入框本身私密（密码等），或宿主在「不学习」名单里（文件管理器 / 桌面）。
+    /// 两种情况都让 Engine 不学、不记、不发云端。
+    fn effective_private(&self) -> bool {
+        self.focused_private() || self.config.learning_off_in(self.focused_app())
     }
 
     /// 当前聚焦的会话在私密输入框里（Engine 不学不记不发云端）。
@@ -41,13 +46,13 @@ impl Router {
             .is_some_and(|info| info.private)
     }
 
-    /// DLL 报来该会话的输入框私密与否变了：记下；是当前会话就立刻让 Engine 进 / 出私密。
+    /// DLL 报来该会话的输入框私密与否变了：记下；是当前会话就按合并了「不学习名单」的结果让 Engine 进 / 出私密。
     pub(super) fn set_privacy(&mut self, session: SessionId, private: bool) {
         if let Some(info) = self.sessions.get_mut(&session) {
             info.private = private;
         }
         if self.focused == Some(session) {
-            self.engine.set_private(private);
+            self.engine.set_private(self.effective_private());
         }
     }
 

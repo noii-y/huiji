@@ -93,6 +93,11 @@ impl RouterConfig {
         self.english_candidates && !app.is_some_and(|app| self.apps.english_candidates_off(app))
     }
 
+    /// 该应用在 `[apps] learning_off` 名单里：这里的输入按私密处理、不学习。没报 exe 名按照常学习。
+    pub fn learning_off_in(&self, app: Option<&str>) -> bool {
+        app.is_some_and(|app| self.apps.learning_off(app))
+    }
+
     /// 交给 UI 线程的画法。
     pub fn render_settings(&self) -> RenderSettings {
         RenderSettings {
