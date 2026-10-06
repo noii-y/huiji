@@ -1,0 +1,79 @@
+# 灰迹排序「首选合理率」标准答案集
+# 格式：目标汉字（首选应等于它）<TAB>拼音（无分隔，撇号分隔音节）<TAB>上文（可空）
+# 用法（在 app/ 目录，空白个人数据、确定性口径）：
+#   cargo run -q -p qingjian-cli -- --eval-text huiji/评测/排序/首选-标准答案.tsv
+# 指标：top1=首选正好命中；top3/top5=命中在前几。任何排序改动都先在本集上比，数字不许倒退。
+#
+# === A. 多音字：常见读音的字必须首选，罕见读音怪物不得抢首 ===
+月	yue
+胡	hu
+第	di
+行	hang
+性	xing
+了	le
+了	liao
+长	chang
+张	zhang
+中	zhong
+快	kuai
+还	hai
+换	huan
+都	dou
+度	du
+冲	chong
+穿	chuan
+但	dan
+谈	tan
+将	jiang
+想	xiang
+# === B. 声母缩写：高共识首选 ===
+使用	sy
+参与	cy
+# === C. 真实整句：日常句子要能还原 ===
+我想去银行	woxiangquyinhang
+这个东西很长	zhegedongxihenchang
+我长高了	wozhanggaole
+会计	kuaiji
+音乐	yinyue
+快乐	kuaile
+还有	haiyou
+都是	doushi
+首都	shoudu
+目的	mudi
+重新	chongxin
+重要	zhongyao
+传染	chuanran
+子弹	zidan
+降落	jiangluo
+头像	touxiang
+我要吃苹果	woyaochipingguo
+今天天气很好	jintiantianqihenhao
+你好吗	nihaoma
+谢谢你	xiexieni
+什么狗屁玩意	shenmegouspiwanyi
+不知道	buzhidao
+为什么	weishenme
+怎么会	zenmehui
+对不起	duibuqi
+没关系	meiguanxi
+一会儿	yihuier
+第一个	di'y'g
+第一次	diyici
+世界上	shijieshang
+有意思	youyisi
+不告诉你	bugaosuni
+听不懂	tingbudong
+说清楚	shuoqingchu
+看不清	kanbuqing
+想一想	xiangyixiang
+做不到	zuobudao
+来得及	laideji
+差不多	chabuduo
+可是	keshi
+但是	danshi
+如果	ruguo
+因为	yinwei
+所以	suoyi
+为了什么	weileshenme
+# === D. 组合自然度（曾出怪，锁定正确组合，见步骤1b） ===
+就是说	jiushish
