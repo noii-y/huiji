@@ -202,7 +202,7 @@ pub fn convert_paths(
                     start,
                     text: hit.text.clone(),
                     syllables: hit.syllables.clone(),
-                    score: score + bonus - hit.penalty,
+                    score: score + bonus - hit.penalty + hit.emission,
                     static_score,
                     back,
                     placeholder: false,
@@ -314,18 +314,22 @@ fn span_candidates(
             .sum::<f64>()
     };
     // 得分先算好再排：单字母简拼的格子能命中几千条，比较器里每次查两张表会让排序占掉十几毫秒
-    let mut scored: Vec<(f64, f64, Match<'_>)> = dictionaries
+    let mut scored: Vec<(f64, f64, f64, Match<'_>)> = dictionaries
         .iter()
-        .flat_map(|d| d.lookup_exact_alt(span))
-        .map(|m| {
+        .flat_map(|d| d.lookup_exact_alt(span).into_iter().map(move |m| (d, m)))
+        .map(|(d, m)| {
             let seen = weight(m.text) + personal.count(m.text);
             let penalty = penalty_of(&m);
-            let score = f64::from(m.frequency) * (1.0 + f64::from(seen)) * (-penalty).exp();
-            (score, penalty, m)
+            let emission = d.reading_emission_log(m.text, m.frequency);
+            let score = f64::from(m.frequency)
+                * (1.0 + f64::from(seen))
+                * (-penalty).exp()
+                * emission.exp();
+            (score, penalty, emission, m)
         })
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    scored.dedup_by(|a, b| a.2.text == b.2.text);
+    scored.dedup_by(|a, b| a.3.text == b.3.text);
     let abbreviated = span.iter().any(|p| p.iter().any(|t| !t.complete));
     scored.truncate(if abbreviated {
         ABBREVIATED_SPAN_CANDIDATES
@@ -334,11 +338,12 @@ fn span_candidates(
     });
     scored
         .into_iter()
-        .map(|(_, penalty, hit)| SpanWord {
+        .map(|(_, penalty, emission, hit)| SpanWord {
             text: hit.text.to_owned(),
             syllables: hit.syllables().map(str::to_owned).collect(),
             frequency: hit.frequency,
             penalty,
+            emission,
         })
         .collect()
 }

@@ -248,6 +248,7 @@ fn legacy_qj_umlaut_keys_remain_queryable() {
         ]),
         total_frequency: 190,
         metadata: None,
+        word_totals: OnceLock::new(),
     };
     let dir = std::env::temp_dir().join("qingjian-dictionary-tests");
     std::fs::create_dir_all(&dir).unwrap();
@@ -270,4 +271,19 @@ fn legacy_qj_umlaut_keys_remain_queryable() {
     assert_eq!(texts(&dictionary.lookup(&["lve"], false)), ["略"]);
     assert_eq!(texts(&dictionary.lookup(&["nue"], false)), ["虐"]);
     assert_eq!(texts(&dictionary.lookup(&["nve"], false)), ["虐"]);
+}
+
+#[test]
+fn reading_emission_penalizes_rare_readings() {
+    // 多音字「行」：常见 xing、罕见 hang；单读音「第」di。
+    let dictionary =
+        Dictionary::parse("行\txing\t100000\n行\thang\t1000\n第\tdi\t90000\n").unwrap();
+    // 常见读音与单读音词：发射项约为 0
+    assert!(dictionary.reading_emission_log("行", 100_000) > -0.02);
+    assert!(dictionary.reading_emission_log("第", 90_000).abs() < 1e-9);
+    // 罕见读音 hang：约 ln(1000/101000) ≈ -4.6，明显为负
+    let rare = dictionary.reading_emission_log("行", 1_000);
+    assert!(rare < -4.0, "rare emission was {rare}");
+    // 词库里没有的词：按单读音处理，为 0
+    assert_eq!(dictionary.reading_emission_log("生僻", 123), 0.0);
 }

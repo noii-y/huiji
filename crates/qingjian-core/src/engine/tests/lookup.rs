@@ -444,3 +444,23 @@ fn partially_spelled_input_does_not_use_the_abbreviation_unigram_branch() {
     engine.set_input("shij");
     assert!(texts_of(&engine).iter().any(|text| text == "世纪"));
 }
+
+#[test]
+fn rare_readings_do_not_rank_first() {
+    let dictionary = Dictionary::parse(
+        "的\tde\t10000000\n的\tdi\t2000\n第\tdi\t90000\n一\tyi\t1000000\n个\tge\t600000\n\
+         说\tshuo\t800000\n说\tyue\t4000\n月\tyue\t270000\n越\tyue\t58000\n\
+         戏\thu\t500\n戏\txi\t11000\n呼\thu\t50000\n胡\thu\t40000\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dictionary);
+    // yue：首选是 月，不是罕见读音 yue 的 说
+    engine.set_input("yue");
+    assert_eq!(texts_of(&engine)[0], "月");
+    // hu：罕见读音 hu 的 戏 不抢首
+    engine.set_input("hu");
+    assert_ne!(texts_of(&engine)[0], "戏");
+    // di'y'g：首选 第一个，不是 的一个
+    engine.set_input("di'y'g");
+    assert_eq!(texts_of(&engine)[0], "第一个");
+}

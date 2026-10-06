@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::ops::Range;
 use std::path::Path;
+use std::sync::OnceLock;
 
 use qingjian_format::{Container, Kind, Metadata, Table, Text, Writer};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
@@ -82,6 +84,9 @@ pub struct Dictionary {
 
     /// `.qj` 里的来历（名称、许可证、署名）；TSV 解析的没有。
     metadata: Option<Metadata>,
+
+    /// 词文本 → 该词所有读音词频之和的反查表，读音发射项用它，首次需要时建一次。
+    word_totals: OnceLock<HashMap<String, u64>>,
 }
 
 impl Dictionary {
@@ -193,6 +198,7 @@ impl Dictionary {
             slots: Table::Owned(slots),
             total_frequency,
             metadata: None,
+            word_totals: OnceLock::new(),
         }
     }
 
@@ -293,6 +299,7 @@ impl Dictionary {
             slots,
             total_frequency,
             metadata: Some(container.metadata().clone()),
+            word_totals: OnceLock::new(),
         })
     }
 
@@ -327,6 +334,33 @@ impl Dictionary {
     /// 全部词频之和。
     pub fn total_frequency(&self) -> u64 {
         self.total_frequency
+    }
+
+    /// 词文本在所有读音下的静态词频之和；反查表首次需要时遍历词条建一次。
+    fn word_total_frequency(&self, text: &str, reading_frequency: u32) -> u64 {
+        let totals = self.word_totals.get_or_init(|| {
+            let mut map: HashMap<String, u64> = HashMap::new();
+            for entry in self.entries() {
+                *map.entry(entry.text.to_owned()).or_insert(0) += u64::from(entry.frequency);
+            }
+            map
+        });
+        totals
+            .get(text)
+            .copied()
+            .unwrap_or(u64::from(reading_frequency))
+    }
+
+    /// 读音发射项 log P(这个读音 | 词) = ln(该读音词频 / 该词所有读音词频之和)。
+    ///
+    /// 单读音词为 0；多音字的罕见读音为负（如「的」读 di 仅约 0.2%，约 -6.2），
+    /// 排序加上它，罕见读音就不能靠常见读音的高频率抢首。
+    #[must_use]
+    pub fn reading_emission_log(&self, text: &str, reading_frequency: u32) -> f64 {
+        let total = self
+            .word_total_frequency(text, reading_frequency)
+            .max(u64::from(reading_frequency));
+        (f64::from(reading_frequency) / total as f64).ln()
     }
 
     /// 全部词目，按拼音键的字节序、同一个键下按词频降序。给反查（汉字 → 读音）建索引用。

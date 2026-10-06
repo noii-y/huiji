@@ -178,7 +178,11 @@ impl Engine {
                     sentence::fallback_log_prob(hit.frequency, log_total),
                 )
             };
-            (choice, log_prob)
+            // 多音字罕见读音按读音占比压下去，不能靠常见读音的频率抢首
+            let emission = self
+                .dictionary
+                .reading_emission_log(hit.text, hit.frequency);
+            (choice, log_prob + emission)
         });
         // 辅码态：词库候选按码段**反向**过滤（逐个问「有没有以码段开头的码」），无码词直接隐藏；
         // 命中的按「完全匹配码 > 码长降序 > 原词频序」重排（stable sort 保住 rank 排好的原序）。
