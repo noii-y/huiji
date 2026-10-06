@@ -44,7 +44,7 @@ pub fn weight_bonus(count: u32) -> f64 {
 pub fn rank(
     items: &mut Vec<Scored<'_>>,
     limit: usize,
-    context: impl Fn(&Scored<'_>) -> (u32, f64),
+    context: impl Fn(&Scored<'_>) -> (u32, f64, bool),
 ) {
     // 远超上限时先按结构键 + 词频线性选出前面一段：同一个词会被多种切分命中，多选一倍留给去重（结果仍可能略少于上限，无妨）
     let preselect = limit.saturating_mul(2);
@@ -60,9 +60,9 @@ pub fn rank(
     let mut keyed: Vec<(SortKey<'_>, Scored<'_>)> = items
         .drain(..)
         .map(|item| {
-            let (choice, log_prob) = context(&item);
+            let (choice, log_prob, rare) = context(&item);
             let score = log_prob + weight_bonus(item.weight) - item.penalty;
-            (item.key(choice, score), item)
+            (item.key(rare, choice, score), item)
         })
         .collect();
     keyed.sort_unstable_by(|a, b| a.0.cmp(&b.0));
@@ -118,7 +118,7 @@ mod tests {
                 penalty: 0.0,
             },
         ];
-        rank(&mut items, usize::MAX, |_| (0, 0.0));
+        rank(&mut items, usize::MAX, |_| (0, 0.0, false));
         let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
         assert_eq!(texts, ["开发", "开放", "开发者"]);
     }
@@ -144,7 +144,7 @@ mod tests {
             },
         ];
         // 上下文说 吧 更像：词频高的 把 让位
-        let by_context = |s: &Scored<'_>| (0, if s.hit.text == "吧" { -1.0 } else { -6.0 });
+        let by_context = |s: &Scored<'_>| (0, if s.hit.text == "吧" { -1.0 } else { -6.0 }, false);
         rank(&mut items, usize::MAX, by_context);
         let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
         assert_eq!(texts, ["吧", "把"]);
@@ -153,6 +153,7 @@ mod tests {
             (
                 u32::from(s.hit.text == "把"),
                 if s.hit.text == "吧" { -1.0 } else { -6.0 },
+                false,
             )
         });
         assert_eq!(items[0].hit.text, "把");
@@ -160,7 +161,7 @@ mod tests {
         for item in &mut items {
             item.weight = u32::from(item.hit.text == "把") * 3;
         }
-        rank(&mut items, usize::MAX, |_| (0, -2.0));
+        rank(&mut items, usize::MAX, |_| (0, -2.0, false));
         assert_eq!(items[0].hit.text, "把");
         for item in &mut items {
             item.weight = 3;
@@ -170,7 +171,7 @@ mod tests {
                 0.0
             };
         }
-        rank(&mut items, usize::MAX, |_| (0, -2.0));
+        rank(&mut items, usize::MAX, |_| (0, -2.0, false));
         assert_eq!(items[0].hit.text, "吧");
     }
 
@@ -194,7 +195,7 @@ mod tests {
                 penalty: 0.0,
             },
         ];
-        rank(&mut items, usize::MAX, |_| (0, 0.0));
+        rank(&mut items, usize::MAX, |_| (0, 0.0, false));
         assert_eq!(items[0].hit.text, "开放");
     }
 
@@ -226,7 +227,7 @@ mod tests {
                 penalty: 0.0,
             },
         ];
-        rank(&mut items, usize::MAX, |_| (0, 0.0));
+        rank(&mut items, usize::MAX, |_| (0, 0.0, false));
         assert_eq!(items.len(), 1);
         assert!(items[0].hit.exact);
     }

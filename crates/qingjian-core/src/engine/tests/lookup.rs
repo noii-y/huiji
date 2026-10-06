@@ -464,3 +464,19 @@ fn rare_readings_do_not_rank_first() {
     engine.set_input("di'y'g");
     assert_eq!(texts_of(&engine)[0], "第一个");
 }
+
+#[test]
+fn rare_reading_stays_behind_even_with_high_personal_weight() {
+    let dictionary = Dictionary::parse(
+        // 和 主要读 he，hu（和牌）只占约 4.7%；胡 只读 hu
+        "和\the\t900000\n和\thu\t45000\n胡\thu\t40000\n湖\thu\t22000\n",
+    )
+    .unwrap();
+    // 用户在日常（he 读音）里选过 和 很多次，个人权重很高
+    let mut weights = std::collections::HashMap::new();
+    weights.insert("和".to_owned(), 50);
+    let mut engine = Engine::new(dictionary).with_learner(Box::new(CountingLearner(weights)));
+    // 打 hu：常见读音的 胡 仍应首选，个人权重不能把罕见读音 hu 的 和 顶上来
+    engine.set_input("hu");
+    assert_eq!(texts_of(&engine)[0], "胡");
+}

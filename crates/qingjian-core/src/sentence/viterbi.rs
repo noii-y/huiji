@@ -15,6 +15,11 @@ use crate::ranking::weight_bonus;
 /// 词库里没有的孤立音节（罕见音节没有单字）按这个 log 概率兜底，让路径总能走通。
 const UNKNOWN_LOG_PROB: f64 = -30.0;
 
+/// 读音硬闸门在整句路径上的固定重罚：格子里的词属于罕见读音时叠加。
+/// 取 -8：常见搭配、个人 ngram 的分差一般只有几个点，罕见读音词因此在这个格子上稳输给常见读音词；
+/// 若该格子下所有词都是罕见读音（真遇到生僻音节），大家都带同样的罚，相对次序不受影响。
+const RARE_SPAN_PENALTY: f64 = -8.0;
+
 /// 一条部分路径的末尾节点。
 struct Node {
     /// 这个词从第几个音节开始。
@@ -202,7 +207,9 @@ pub fn convert_paths(
                     start,
                     text: hit.text.clone(),
                     syllables: hit.syllables.clone(),
-                    score: score + bonus - hit.penalty + hit.emission,
+                    score: score + bonus - hit.penalty
+                        + hit.emission
+                        + if hit.rare { RARE_SPAN_PENALTY } else { 0.0 },
                     static_score,
                     back,
                     placeholder: false,
@@ -314,22 +321,23 @@ fn span_candidates(
             .sum::<f64>()
     };
     // 得分先算好再排：单字母简拼的格子能命中几千条，比较器里每次查两张表会让排序占掉十几毫秒
-    let mut scored: Vec<(f64, f64, f64, Match<'_>)> = dictionaries
+    let mut scored: Vec<(f64, f64, f64, bool, Match<'_>)> = dictionaries
         .iter()
         .flat_map(|d| d.lookup_exact_alt(span).into_iter().map(move |m| (d, m)))
         .map(|(d, m)| {
             let seen = weight(m.text) + personal.count(m.text);
             let penalty = penalty_of(&m);
             let emission = d.reading_emission_log(m.text, m.frequency);
+            let rare = d.reading_is_rare(m.text, m.frequency);
             let score = f64::from(m.frequency)
                 * (1.0 + f64::from(seen))
                 * (-penalty).exp()
                 * emission.exp();
-            (score, penalty, emission, m)
+            (score, penalty, emission, rare, m)
         })
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    scored.dedup_by(|a, b| a.3.text == b.3.text);
+    scored.dedup_by(|a, b| a.4.text == b.4.text);
     let abbreviated = span.iter().any(|p| p.iter().any(|t| !t.complete));
     scored.truncate(if abbreviated {
         ABBREVIATED_SPAN_CANDIDATES
@@ -338,12 +346,13 @@ fn span_candidates(
     });
     scored
         .into_iter()
-        .map(|(_, penalty, emission, hit)| SpanWord {
+        .map(|(_, penalty, emission, rare, hit)| SpanWord {
             text: hit.text.to_owned(),
             syllables: hit.syllables().map(str::to_owned).collect(),
             frequency: hit.frequency,
             penalty,
             emission,
+            rare,
         })
         .collect()
 }

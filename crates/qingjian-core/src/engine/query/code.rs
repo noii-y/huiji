@@ -54,7 +54,7 @@ impl Engine {
                 item.hit.text,
                 sentence::fallback_log_prob(item.hit.frequency, log_total),
             );
-            (choice, log_prob)
+            (choice, log_prob, false)
         });
         let rank = start.elapsed();
         // `exact` 是排序的最高位，打全的都在最前面

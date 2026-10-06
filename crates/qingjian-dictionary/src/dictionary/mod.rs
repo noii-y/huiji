@@ -363,6 +363,21 @@ impl Dictionary {
         (f64::from(reading_frequency) / total as f64).ln()
     }
 
+    /// 读音硬闸门的分界：该读音占该词全部读音词频的比例低于此值，判为「罕见读音」。
+    ///
+    /// 取 8%：常见多音字的正经读音（重 chong 约 15%、乐 yue 约 16%、降 xiang 约 24%）都在线内；
+    /// 常见字漏过来的罕见读音（的 di 约 0.2%、和 hu / 说 yue / 戏 hu 约 4.5%~4.8%）在线外。
+    /// 只在整字（单字自由组合）层面起作用；正经的小读音大多以整词出现（银行、归还、首都），
+    /// 整词只有一个读音、不受影响。
+    pub const RARE_READING_SHARE: f64 = 0.08;
+
+    /// 该词在当前读音下是否属于「罕见读音」。罕见读音的字在排序里被硬闸门压到常见读音之后，
+    /// 个人选择次数、个人 ngram 等任何通道都不能把它重新顶到前面。
+    #[must_use]
+    pub fn reading_is_rare(&self, text: &str, reading_frequency: u32) -> bool {
+        self.reading_emission_log(text, reading_frequency) < Self::RARE_READING_SHARE.ln()
+    }
+
     /// 全部词目，按拼音键的字节序、同一个键下按词频降序。给反查（汉字 → 读音）建索引用。
     pub fn entries(&self) -> impl Iterator<Item = Match<'_>> + '_ {
         self.index.iter().flat_map(move |entry| {

@@ -102,6 +102,7 @@ mod tests {
                     frequency: 9,
                     penalty: 0.0,
                     emission: 0.0,
+                    rare: false,
                 }]
             })
         };

@@ -182,7 +182,10 @@ impl Engine {
             let emission = self
                 .dictionary
                 .reading_emission_log(hit.text, hit.frequency);
-            (choice, log_prob + emission)
+            // 读音硬闸门：罕见读音（占比 < 阈值）整体压到常见读音之后，
+            // 下面的 choice、weight、个人 ngram 都无法把它重新顶上来
+            let rare = self.dictionary.reading_is_rare(hit.text, hit.frequency);
+            (choice, log_prob + emission, rare)
         });
         // 辅码态：词库候选按码段**反向**过滤（逐个问「有没有以码段开头的码」），无码词直接隐藏；
         // 命中的按「完全匹配码 > 码长降序 > 原词频序」重排（stable sort 保住 rank 排好的原序）。
