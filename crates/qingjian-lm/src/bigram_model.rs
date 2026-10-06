@@ -14,6 +14,9 @@ pub const SENTENCE_START: &str = "<s>";
 /// 二元概率里 bigram 部分的权重，其余给一元概率。
 const LAMBDA: f64 = 0.8;
 
+/// 句首位置 bigram 部分的权重：比句中小，让整体一元在句首占比更高（见 log_prob）。
+const START_LAMBDA: f64 = 0.6;
+
 /// `.qj` 里的分节：词文本 arena、词表、词的哈希索引、CSR 的段偏移与后继。
 const WORDS_TAG: [u8; 4] = *b"WORD";
 const ENTRIES_TAG: [u8; 4] = *b"ENTR";
@@ -325,8 +328,15 @@ impl LanguageModel for BigramModel {
         let probability = match previous {
             Some(prev_id) if self.entries[prev_id as usize].count > 0 => {
                 let pair = self.bigram(prev_id, id).map_or(0.0, f64::from);
-                LAMBDA * pair / f64::from(self.entries[prev_id as usize].count)
-                    + (1.0 - LAMBDA) * unigram
+                // 句首用专门的配比：语料的句首二元受领域影响，给整体一元（wordfreq，多语域）更多权重，
+                // 避免 xing 这类把「型」顶过「行」；句中仍用 LAMBDA。
+                let lambda = if previous == self.start {
+                    START_LAMBDA
+                } else {
+                    LAMBDA
+                };
+                lambda * pair / f64::from(self.entries[prev_id as usize].count)
+                    + (1.0 - lambda) * unigram
             }
             // 前词不在模型里：只剩一元概率
             _ => unigram,
@@ -365,6 +375,23 @@ mod tests {
         let alone = model.log_prob(Some("火星"), "想").unwrap();
         assert!((alone - (30.0_f64 / 101.0).ln()).abs() < 1e-9);
         assert_eq!(model.log_prob(Some("我"), "火星"), None);
+    }
+
+    #[test]
+    fn start_gives_more_weight_to_unigram_than_mid_sentence() {
+        // 甲：句首二元高、整体一元低；乙：句首二元低、整体一元高
+        let uni = "<s>\t100\n甲\t10\n乙\t90\n";
+        let bi = "<s>\t甲\t70\n<s>\t乙\t30\n";
+        let model = BigramModel::parse(uni, bi).unwrap();
+        // 句首：0.6 句首二元 + 0.4 一元 → 乙（0.54）压过甲（0.46）
+        let jia = model.log_prob(None, "甲").unwrap();
+        let yi = model.log_prob(None, "乙").unwrap();
+        assert!(yi > jia);
+        assert!((yi - 0.54_f64.ln()).abs() < 1e-9);
+        // 若按句中 0.8 配比，甲（0.58）会压过乙（0.42）——说明句首确实用了更偏一元的配比
+        let jia_mid = 0.8 * (70.0 / 100.0) + 0.2 * (10.0 / 100.0);
+        let yi_mid = 0.8 * (30.0 / 100.0) + 0.2 * (90.0 / 100.0);
+        assert!(jia_mid > yi_mid);
     }
 
     #[test]
