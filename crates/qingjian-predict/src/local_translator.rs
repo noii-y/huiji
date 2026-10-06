@@ -23,8 +23,9 @@ pub enum LocalTranslateError {
     Thread(#[from] std::io::Error),
 }
 
-/// 发给后台线程的任务：序号加待译原文。
-type Job = (u64, String);
+/// 发给后台线程的任务：序号、待译原文，以及是不是「打整句拼音」（true 时译文只展示，
+/// 进 `translation`；false 是选中文字翻译，进 `sentence` 走译文评审）。
+type Job = (u64, String, bool);
 
 /// 端侧翻译器，实现 [`Predictor`]。
 pub struct LocalTranslator {
@@ -87,14 +88,28 @@ fn run(job_rx: Receiver<Job>, result_tx: Sender<Prediction>, translator: Transla
         ..Default::default()
     };
 
-    while let Ok((sequence, text)) = job_rx.recv() {
+    while let Ok((sequence, text, compose)) = job_rx.recv() {
         let prediction = match translator.translate_batch(&[text.as_str()], &options, None) {
-            Ok(batch) if !batch.is_empty() => Prediction {
-                sequence,
-                words: Vec::new(),
+            Ok(batch) if !batch.is_empty() => {
                 // 流行语字面硬译的后处理兜底（摸鱼、内卷等）
-                sentence: Some(crate::terminology::apply(&batch[0].0)),
-            },
+                let rendered = crate::terminology::apply(&batch[0].0);
+                if compose {
+                    // 打整句拼音：外文译文只展示，不占 Tab 的中文纠错位
+                    Prediction {
+                        sequence,
+                        words: Vec::new(),
+                        sentence: None,
+                        translation: Some(rendered),
+                    }
+                } else {
+                    Prediction {
+                        sequence,
+                        words: Vec::new(),
+                        sentence: Some(rendered),
+                        translation: None,
+                    }
+                }
+            }
             // 空结果或出错也回一条，让壳别一直等
             Ok(_) => Prediction {
                 sequence,
@@ -120,11 +135,11 @@ impl Predictor for LocalTranslator {
     }
 
     fn submit(&mut self, request: PredictionRequest) {
-        // 翻译选中文字时原文在 `text`；打整句拼音时用 Core 本地组出的整句 `guess`。
-        // 问字模式不翻译。
-        let source = match request.kind {
-            PredictionKind::Translate => request.text,
-            PredictionKind::Compose => request.guess,
+        // 翻译选中文字时原文在 `text`（compose=false）；打整句拼音时用 Core 本地组出的整句
+        // `guess`（compose=true，译文只展示）。问字模式不翻译。
+        let (source, compose) = match request.kind {
+            PredictionKind::Translate => (request.text, false),
+            PredictionKind::Compose => (request.guess, true),
             PredictionKind::Question => return,
         };
         let source = source.trim();
@@ -133,7 +148,7 @@ impl Predictor for LocalTranslator {
         }
         if self
             .jobs
-            .send((request.sequence, source.to_owned()))
+            .send((request.sequence, source.to_owned(), compose))
             .is_err()
         {
             tracing::warn!("端侧翻译线程已退出，请求被丢弃");
@@ -184,9 +199,10 @@ mod tests {
         let (mut translator, job_rx) = harness();
         translator.submit(request(7, PredictionKind::Translate, "你好", ""));
 
-        let (sequence, text) = job_rx.try_recv().expect("任务应进入队列");
+        let (sequence, text, compose) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(sequence, 7);
         assert_eq!(text, "你好");
+        assert!(!compose);
     }
 
     #[test]
@@ -194,9 +210,10 @@ mod tests {
         let (mut translator, job_rx) = harness();
         translator.submit(request(4, PredictionKind::Compose, "", "你今天晚上有空吗"));
 
-        let (sequence, text) = job_rx.try_recv().expect("任务应进入队列");
+        let (sequence, text, compose) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(sequence, 4);
         assert_eq!(text, "你今天晚上有空吗");
+        assert!(compose);
     }
 
     #[test]
@@ -229,7 +246,17 @@ mod tests {
             "  今天天气不错  ",
             "",
         ));
-        let (_, text) = job_rx.try_recv().expect("任务应进入队列");
+        let (_, text, compose) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(text, "今天天气不错");
+        assert!(!compose);
+    }
+
+    #[test]
+    fn 组句请求标记为compose() {
+        let (mut translator, job_rx) = harness();
+        translator.submit(request(4, PredictionKind::Compose, "你好", ""));
+        let (_, text, compose) = job_rx.try_recv().expect("任务应进入队列");
+        assert_eq!(text, "你好");
+        assert!(compose);
     }
 }

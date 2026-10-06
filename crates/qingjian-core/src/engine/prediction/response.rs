@@ -9,12 +9,15 @@ pub struct Prediction {
     /// 这段拼音可能对应的词（已按拼音校验）。
     pub words: Vec<CloudWord>,
 
-    /// 组句中的整句补全，替换整段拼音。
+    /// 中文整句纠错或补全（云端）：替换整段拼音，按 Tab 上屏。
     pub sentence: Option<String>,
+
+    /// 组句中文的外文译文（本地翻译模型）：只展示、不上屏，Tab 不接受。
+    pub translation: Option<String>,
 }
 
 impl Prediction {
     pub fn is_empty(&self) -> bool {
-        self.words.is_empty() && self.sentence.is_none()
+        self.words.is_empty() && self.sentence.is_none() && self.translation.is_none()
     }
 }

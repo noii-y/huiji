@@ -28,14 +28,15 @@ struct Columns {
 pub(super) fn preferred_size(hdc: HDC, data: &RenderData) -> SIZE {
     let theme = &data.theme;
     let (top_width, top_height) = top_line_size(hdc, data);
+    let (cloud_width, cloud_height) = cloud_line_size(hdc, data);
     let (notice_width, notice_height) = notice_line_size(hdc, data);
     let (body_width, body_height) = match data.layout {
         LayoutMode::Vertical => vertical_size(hdc, data),
         LayoutMode::Horizontal => horizontal_size(hdc, data),
     };
     SIZE {
-        cx: top_width.max(body_width).max(notice_width) + theme.padding * 2,
-        cy: top_height + notice_height + body_height + theme.padding * 2,
+        cx: top_width.max(body_width).max(notice_width).max(cloud_width) + theme.padding * 2,
+        cy: top_height + cloud_height + notice_height + body_height + theme.padding * 2,
     }
 }
 
@@ -109,6 +110,7 @@ pub(super) fn paint(hdc: HDC, data: &RenderData, client: RECT) {
 
     let mut y = theme.padding;
     y += draw_top_line(hdc, data, y);
+    y += draw_cloud_line(hdc, data, y);
     y += draw_notice(hdc, data, y);
     match data.layout {
         LayoutMode::Vertical => draw_rows(hdc, data, y, client.right - client.left),
@@ -119,7 +121,7 @@ pub(super) fn paint(hdc: HDC, data: &RenderData, client: RECT) {
 /// 顶部拼音行：各段按样式画、自己画光标、右侧整句补全。返回占用高度。
 /// 「只在行内」时没有拼音行，但整句补全仍要画（占用同一条线）。
 fn draw_top_line(hdc: HDC, data: &RenderData, y: i32) -> i32 {
-    if data.preedit.is_empty() && data.sentence.is_none() {
+    if data.preedit.is_empty() && data.translation.is_none() {
         return 0;
     }
     let theme = &data.theme;
@@ -167,24 +169,15 @@ fn draw_top_line(hdc: HDC, data: &RenderData, y: i32) -> i32 {
         };
         fill_rect(hdc, caret, theme.text_color);
     }
-    if let Some(sentence) = &data.sentence {
-        let sentence_x = x + theme.column_gap;
-        let cloud = cloud_glyph_width(hdc, theme);
-        draw_text(
-            hdc,
-            theme.annotation_font,
-            theme.cloud_color,
-            sentence_x,
-            top,
-            CLOUD_GLYPH,
-        );
+    if let Some(translation) = &data.translation {
+        let translation_x = x + theme.column_gap;
         draw_text(
             hdc,
             theme.annotation_font,
             theme.gloss_color,
-            sentence_x + cloud,
+            translation_x,
             top,
-            sentence,
+            translation,
         );
     }
     height + theme.row_padding * 2
@@ -364,24 +357,62 @@ fn draw_horizontal(hdc: HDC, data: &RenderData, y: i32, width: i32) {
 }
 
 fn top_line_size(hdc: HDC, data: &RenderData) -> (i32, i32) {
-    if data.preedit.is_empty() && data.sentence.is_none() {
+    if data.preedit.is_empty() && data.translation.is_none() {
         return (0, 0);
     }
     let theme = &data.theme;
     let height = line_height(hdc, theme.annotation_font);
-    // 没有拼音行时那段宽度为 0，但整句补全前面的间隔照旧。
+    // 没有拼音行时那段宽度为 0，但译文前的间隔照旧。
     let mut width = if data.preedit.is_empty() {
         0
     } else {
         let full: String = data.preedit.iter().map(|(t, _)| t.as_str()).collect();
         measure(hdc, theme.annotation_font, &full).cx + scale_line(theme)
     };
-    if let Some(sentence) = &data.sentence {
-        width += theme.column_gap
-            + cloud_glyph_width(hdc, theme)
-            + measure(hdc, theme.annotation_font, sentence).cx;
+    if let Some(translation) = &data.translation {
+        width += theme.column_gap + measure(hdc, theme.annotation_font, translation).cx;
     }
     (width, height + theme.row_padding * 2)
+}
+
+/// 中文整句纠错行（云朵 + 句子）的尺寸；没有 sentence 时都是 0。
+fn cloud_line_size(hdc: HDC, data: &RenderData) -> (i32, i32) {
+    let Some(sentence) = &data.sentence else {
+        return (0, 0);
+    };
+    let theme = &data.theme;
+    let width = cloud_glyph_width(hdc, theme) + measure(hdc, theme.annotation_font, sentence).cx;
+    let height = line_height(hdc, theme.annotation_font);
+    (width, height + theme.row_padding * 2)
+}
+
+/// 画中文整句纠错行：云朵 + 句子（云端色），返回占用高度。
+fn draw_cloud_line(hdc: HDC, data: &RenderData, y: i32) -> i32 {
+    let Some(sentence) = &data.sentence else {
+        return 0;
+    };
+    let theme = &data.theme;
+    let height = line_height(hdc, theme.annotation_font);
+    let top = y + theme.row_padding;
+    let x = theme.padding;
+    let cloud = cloud_glyph_width(hdc, theme);
+    draw_text(
+        hdc,
+        theme.annotation_font,
+        theme.cloud_color,
+        x,
+        top,
+        CLOUD_GLYPH,
+    );
+    draw_text(
+        hdc,
+        theme.annotation_font,
+        theme.cloud_color,
+        x + cloud,
+        top,
+        sentence,
+    );
+    height + theme.row_padding * 2
 }
 
 fn columns(hdc: HDC, theme: &Theme, rows: &[Row]) -> Columns {

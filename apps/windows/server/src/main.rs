@@ -199,11 +199,10 @@ fn main() {
     engine.set_shift_letter_compose(config.general.shift_letter.compose());
     engine.set_shuangpin_raw_preedit(config.general.shuangpin_raw_preedit);
     engine.log_session(env!("CARGO_PKG_VERSION"), "windows");
-    dispatch::attach_cloud(&mut engine, &config.predict);
+    // 云端拼音纠错与端侧整句翻译同时挂（DualPredictor），缺哪个就只挂另一个
+    dispatch::attach_predictors(&mut engine, &config.predict, user_dir().as_deref(), &root);
     let router_config = RouterConfig::from(&config);
     let mut router = Router::new(engine, router_config.clone());
-    // 端侧整句翻译：本地模型在就离线翻译、覆盖云端；返回 false 则沿用上面的 attach_cloud
-    router.attach_local_translator(user_dir().as_deref(), &root);
     let model_path = dispatch::find_model(user_dir().as_deref(), &root);
     router.configure_local_model(model_path.clone(), &config.model);
     router.configure_code_table(dispatch::find_code_table(user_dir().as_deref(), &root));

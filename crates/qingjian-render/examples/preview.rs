@@ -245,6 +245,7 @@ fn matrix() -> Frame {
             .collect(),
         footer: Some("2/12".into()),
         sentence: None,
+        translation: None,
         status: None,
     }
 }
@@ -300,11 +301,12 @@ fn nihao() -> Frame {
         column_ems: Vec::new(),
         footer: Some("1/6".to_owned()),
         sentence: None,
+        translation: None,
         status: None,
     }
 }
 
-/// 横排真机截图那一次云端整句到了：拼音行右侧带云朵的整句补全。
+/// 横排真机截图那一次云端整句到了：拼音行下方带云朵的中文整句纠错。
 fn nihao_with_sentence() -> Frame {
     let mut frame = nihao();
     frame.sentence = Some("你好，很高兴认识你！".to_owned());
@@ -372,6 +374,7 @@ fn corrected_japanese() -> Frame {
         column_ems: Vec::new(),
         footer: None,
         sentence: None,
+        translation: None,
         status: Some("已删除「开放」".to_owned()),
     }
 }
@@ -386,6 +389,7 @@ fn probe() -> Frame {
         column_ems: Vec::new(),
         footer: None,
         sentence: None,
+        translation: None,
         status: None,
     }
 }

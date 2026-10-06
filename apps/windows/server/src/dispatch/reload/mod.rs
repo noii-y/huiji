@@ -9,8 +9,20 @@ mod tests;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+use qingjian_core::Predictor;
 use qingjian_core::{Engine, Language, NoGlossFiller, NoPredictor, NoTranslator};
 use qingjian_platform::{Config, code_tables};
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+use qingjian_predict::DualPredictor;
 #[cfg(any(
     feature = "local-nmt",
     feature = "local-nmt-mkl",
@@ -36,23 +48,73 @@ fn mtime(path: &Path) -> Option<SystemTime> {
         .ok()
 }
 
-/// 按 `[predict]` 接云联想与释义兜底；关着或缺密钥就退回本地实现。启动与热加载共用。
-pub fn attach_cloud(engine: &mut Engine, predict: &PredictConfig) {
+/// 按 `[predict]` 与端侧翻译模型装配预测器：云端拼音纠错与端侧整句翻译同时挂（[`DualPredictor`]），
+/// 不再互相覆盖。启动与热加载共用；释义兜底另由 [`attach_gloss_filler`] 挂。
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+pub fn attach_predictors(
+    engine: &mut Engine,
+    predict: &PredictConfig,
+    user_dir: Option<&Path>,
+    bundled_root: &Path,
+) {
+    let cloud = build_cloud_predictor(predict);
+    let local = build_local_translator(user_dir, bundled_root);
+    let predictor: Box<dyn Predictor> = match (cloud, local) {
+        (Some(c), Some(l)) => Box::new(DualPredictor::new(Some(c), Some(l))),
+        (Some(c), None) => Box::new(c),
+        (None, Some(l)) => Box::new(l),
+        (None, None) => Box::new(NoPredictor),
+    };
+    engine.set_predictor(predictor);
+    attach_gloss_filler(engine, predict);
+}
+
+/// 没编端侧翻译 feature：只挂云端纠错，没有就退回空预测器。
+#[cfg(not(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+)))]
+pub fn attach_predictors(
+    engine: &mut Engine,
+    predict: &PredictConfig,
+    _user_dir: Option<&Path>,
+    _bundled_root: &Path,
+) {
+    match build_cloud_predictor(predict) {
+        Some(cloud) => engine.set_predictor(Box::new(cloud)),
+        None => engine.set_predictor(Box::new(NoPredictor)),
+    }
+    attach_gloss_filler(engine, predict);
+}
+
+/// 构建云端拼音纠错器：开着且密钥能解析才返回，否则 `None`（安静退回端侧 / 本地候选）。
+fn build_cloud_predictor(predict: &PredictConfig) -> Option<CloudPredictor> {
     if !predict.enabled {
         tracing::info!("云联想未开启（[predict] enabled = false）");
-        engine.set_predictor(Box::new(NoPredictor));
-        engine.set_gloss_filler(Box::new(NoGlossFiller));
-        return;
+        return None;
     }
     match CloudPredictor::new(predict) {
         Ok(predictor) => {
-            engine.set_predictor(Box::new(predictor));
-            tracing::info!(model = %predict.model, "云联想已接入");
+            tracing::info!(model = %predict.model, "云端拼音纠错已接入");
+            Some(predictor)
         }
         Err(error) => {
-            tracing::warn!(%error, "云联想接入失败（缺 API key？），退回本地候选");
-            engine.set_predictor(Box::new(NoPredictor));
+            tracing::warn!(%error, "云端纠错接入失败（缺 API key？），只用端侧 / 本地候选");
+            None
         }
+    }
+}
+
+/// 释义兜底：开着才挂网络释义器，关着或装不上用空实现。
+fn attach_gloss_filler(engine: &mut Engine, predict: &PredictConfig) {
+    if !predict.enabled {
+        engine.set_gloss_filler(Box::new(NoGlossFiller));
+        return;
     }
     match CloudGlossFiller::new(predict) {
         Ok(filler) => engine.set_gloss_filler(Box::new(filler)),
@@ -63,49 +125,23 @@ pub fn attach_cloud(engine: &mut Engine, predict: &PredictConfig) {
     }
 }
 
-/// 端侧整句翻译优先：本地有 opus-mt 模型就挂 [`LocalTranslator`]（离线、数据不出本机），
-/// 覆盖 attach_cloud 挂的云端 / 空实现。返回是否启用，Router 据此决定 Tab 行为。
+/// 构建端侧整句翻译器：本地有 opus-mt 模型才返回（离线、数据不出本机）。
 #[cfg(any(
     feature = "local-nmt",
     feature = "local-nmt-mkl",
     feature = "local-nmt-system"
 ))]
-impl Router {
-    pub fn attach_local_translator(
-        &mut self,
-        user_dir: Option<&Path>,
-        bundled_root: &Path,
-    ) -> bool {
-        let Some(model) = find_translation_model(user_dir, bundled_root) else {
-            return false;
-        };
-        match LocalTranslator::new(&model) {
-            Ok(translator) => {
-                self.engine.set_predictor(Box::new(translator));
-                self.local_translation = true;
-                tracing::info!(model = %model.display(), "端侧整句翻译已接入（离线）");
-                true
-            }
-            Err(error) => {
-                tracing::warn!(%error, "端侧翻译模型加载失败，沿用云端 / 本地候选");
-                false
-            }
+fn build_local_translator(user_dir: Option<&Path>, bundled_root: &Path) -> Option<LocalTranslator> {
+    let model = find_translation_model(user_dir, bundled_root)?;
+    match LocalTranslator::new(&model) {
+        Ok(translator) => {
+            tracing::info!(model = %model.display(), "端侧整句翻译已接入（离线）");
+            Some(translator)
         }
-    }
-}
-
-#[cfg(not(any(
-    feature = "local-nmt",
-    feature = "local-nmt-mkl",
-    feature = "local-nmt-system"
-)))]
-impl Router {
-    pub fn attach_local_translator(
-        &mut self,
-        _user_dir: Option<&Path>,
-        _bundled_root: &Path,
-    ) -> bool {
-        false
+        Err(error) => {
+            tracing::warn!(%error, "端侧翻译模型加载失败");
+            None
+        }
     }
 }
 
@@ -295,7 +331,12 @@ impl Router {
         };
         reload.update = config.update.clone();
         if config.predict != reload.applied_predict {
-            attach_cloud(&mut self.engine, &config.predict);
+            attach_predictors(
+                &mut self.engine,
+                &config.predict,
+                reload.dirs.user_root.as_deref(),
+                &reload.root,
+            );
             reload.applied_predict = config.predict.clone();
         }
         let language = assembly::learning_language(config);

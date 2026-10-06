@@ -10,6 +10,12 @@ mod chat_client;
 mod cloud_predictor;
 mod config;
 mod connection;
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+mod dual_predictor;
 mod error;
 mod gloss;
 #[cfg(any(
@@ -25,6 +31,12 @@ mod worker;
 pub use cloud_predictor::CloudPredictor;
 pub use config::PredictConfig;
 pub use connection::{ConnectionReport, ConnectionTest};
+#[cfg(any(
+    feature = "local-nmt",
+    feature = "local-nmt-mkl",
+    feature = "local-nmt-system"
+))]
+pub use dual_predictor::DualPredictor;
 pub use error::PredictError;
 pub use gloss::CloudGlossFiller;
 #[cfg(any(

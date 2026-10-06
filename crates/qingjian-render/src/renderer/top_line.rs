@@ -1,11 +1,11 @@
-//! 顶部拼音行：各段按样式画、自己画光标、右侧整句补全或临时状态。
+//! 顶部拼音行：各段按样式画、自己画光标、右侧外文译文或临时状态。中文整句纠错在单独一行。
 
 use super::{CARET_WIDTH, Metrics, Renderer, SENTENCE_GAP};
 use crate::canvas::Canvas;
 use crate::frame::{Frame, Preedit, PreeditStyle};
 
 impl Renderer {
-    /// 顶部拼音行（含右侧整句补全）需要的宽高；没有这一行时都是 0。
+    /// 顶部拼音行（含右侧译文 / 状态）需要的宽高；没有这一行时都是 0。
     pub(super) fn top_line_size(&mut self, frame: &Frame, m: &Metrics) -> (f32, f32) {
         if !frame.has_top_line() {
             return (0.0, 0.0);
@@ -16,12 +16,9 @@ impl Renderer {
         if let Some(preedit) = &frame.preedit {
             width += self.measure(&preedit.text(), &style).width + m.px(CARET_WIDTH);
         }
-        if let Some((text, cloud)) = frame.trailing() {
+        if let Some(text) = frame.trailing() {
             if frame.preedit.is_some() {
                 width += m.px(SENTENCE_GAP);
-            }
-            if cloud {
-                width += m.cloud_width();
             }
             width += self.measure(text, &style).width;
         }
@@ -49,15 +46,9 @@ impl Renderer {
                 x += m.px(SENTENCE_GAP);
             }
         }
-        // 整句补全：云朵 + 句子，颜色与本地候选区分；临时状态灰字、不带云朵
-        if let Some((text, cloud)) = frame.trailing() {
-            let color = if cloud {
-                x += self.draw_cloud(canvas, m, x, top, line_height);
-                m.theme.colors.cloud
-            } else {
-                m.theme.colors.gloss
-            };
-            let style = m.annotation_style(color);
+        // 右侧译文 / 状态：都不带云朵，用译文色
+        if let Some(text) = frame.trailing() {
+            let style = m.annotation_style(m.theme.colors.gloss);
             self.draw_text(canvas, text, &style, x, top);
         }
         line_height + m.row_padding() * 2.0

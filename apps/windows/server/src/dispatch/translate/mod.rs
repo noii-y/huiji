@@ -111,6 +111,7 @@ impl Router {
             theme: self.config.theme,
             aux_code_show: self.config.aux_code_show,
             sentence: None,
+            translation: None,
             notice: None,
         }
     }

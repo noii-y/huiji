@@ -143,11 +143,7 @@ impl Router {
             codes::TAB if self.engine.english_mode() => {
                 Effect::Changed(Some(self.commit_highlighted()))
             }
-            // 中文模式 Tab：端侧译文只供参考、不上屏，Tab 照常翻页；否则有整句补全就接受。
-            codes::TAB if self.local_translation => {
-                self.page(1);
-                Effect::Navigated
-            }
+            // 中文模式 Tab：有云端中文整句纠错就接受上屏，没有就翻页。外文译文只展示、不影响 Tab。
             codes::TAB => match self.sentence.take() {
                 Some(sentence) => Effect::Changed(Some(self.engine.accept_prediction(&sentence))),
                 None => {

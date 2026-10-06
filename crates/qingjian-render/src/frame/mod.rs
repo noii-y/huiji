@@ -28,16 +28,22 @@ pub struct Frame {
     /// 右下角页码。
     pub footer: Option<String>,
 
-    /// 拼音行右侧的整句补全（云联想），组句时才有。
-    pub sentence: Option<String>,
+    /// 拼音行右侧的外文译文（端侧翻译，离线）：只展示、不上屏。
+    pub translation: Option<String>,
 
-    /// 拼音行右侧的一句临时状态（删了什么词），有它时不画整句补全。
+    /// 拼音行右侧的一句临时状态（删了什么词）：有它时不画译文。
     pub status: Option<String>,
+
+    /// 拼音行下方的中文整句纠错（云联想）：带云朵，按 Tab 上屏。
+    pub sentence: Option<String>,
 }
 
 impl Frame {
     pub fn is_empty(&self) -> bool {
-        self.rows.is_empty() && self.preedit.is_none() && self.trailing().is_none()
+        self.rows.is_empty()
+            && self.preedit.is_none()
+            && self.trailing().is_none()
+            && self.sentence.is_none()
     }
 
     /// 顶部要不要画一行（拼音或右侧文字任一存在）。
@@ -45,11 +51,8 @@ impl Frame {
         self.preedit.is_some() || self.trailing().is_some()
     }
 
-    /// 拼音行右侧画什么：状态优先，其次整句补全；`bool` 是要不要带云朵。
-    pub fn trailing(&self) -> Option<(&str, bool)> {
-        self.status
-            .as_deref()
-            .map(|s| (s, false))
-            .or_else(|| self.sentence.as_deref().map(|s| (s, true)))
+    /// 拼音行右侧画什么：状态优先，其次外文译文；都不带云朵（端侧产出、离线）。
+    pub fn trailing(&self) -> Option<&str> {
+        self.status.as_deref().or(self.translation.as_deref())
     }
 }

@@ -2,6 +2,7 @@
 //!
 //! 内部全用像素：主题里的点数进来先乘缩放倍数。文字的 y 都指行框顶边，字形在行高里垂直居中。
 
+mod cloud_line;
 mod columns;
 mod horizontal;
 mod item;
@@ -161,6 +162,7 @@ impl Renderer {
         );
         let mut y = margin + metrics.padding();
         y += self.draw_top_line(&mut canvas, frame, &metrics, margin, y);
+        y += self.draw_cloud_line(&mut canvas, frame, &metrics, margin, y);
         match layout {
             Layout::Vertical => {
                 self.draw_vertical(&mut canvas, frame, &metrics, margin, y, content_width);
@@ -197,18 +199,22 @@ impl Renderer {
     /// 内容需要的像素宽高（不含阴影边）。
     fn preferred_size(&mut self, frame: &Frame, layout: Layout, m: &Metrics) -> (f32, f32) {
         let (top_width, top_height) = self.top_line_size(frame, m);
+        let (cloud_width, cloud_height) = self.cloud_line_size(frame, m);
         let (body_width, body_height) = match layout {
             Layout::Vertical => self.vertical_size(frame, m),
             Layout::Horizontal if frame.columns > 0 => self.matrix_size(frame, m),
             Layout::Horizontal => self.horizontal_size(frame, m),
         };
-        let width = top_width.max(body_width) + m.padding() * 2.0;
+        let width = top_width.max(body_width).max(cloud_width) + m.padding() * 2.0;
         // 竖排时候选都很短（没有译词）窗口会窄得难看，给个下限
         let width = match layout {
             Layout::Vertical => width.max(m.px(MIN_VERTICAL_WIDTH)),
             Layout::Horizontal => width,
         };
-        (width, top_height + body_height + m.padding() * 2.0)
+        (
+            width,
+            top_height + cloud_height + body_height + m.padding() * 2.0,
+        )
     }
 
     pub(super) fn measure(&mut self, text: &str, style: &TextStyle) -> TextSize {

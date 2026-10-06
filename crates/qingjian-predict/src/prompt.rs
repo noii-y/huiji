@@ -23,9 +23,10 @@ words：用户最可能想输入、而本地又给不出（或排错了）的词
 - 只给真实存在的词，不要生造（「不态」「步太」这种组合）；不确定就少给；
 - 本地首选已经对了就不必再给同一个词，也不必给它的同音变体；没有更好的就给空数组，不要凑数。
 
-sentence：want_sentence 为 true 时给一条以这个词开头的完整短句或常用说法，用户常常是想不起来整句怎么说才只敲了开头几个字，\
-或者敲到一半（如 suoyiwoxiangq → 所以我想去吃饭）；有 before / after 就接得上它们，没有就给最常见、最自然的完整表达。\
-它只替换这段拼音，**不要把 before 的内容抄进来**。want_sentence 为 false 时给 null。语言跟随上下文。
+sentence：want_sentence 为 true 时，把 letters **还原成用户本来想打的那一句中文**。用户可能打错、漏打、多打了字母，或用了声母缩写，你的任务是纠错、还原本意，而不是续写。要求：
+- 结果要和 letters 的拼音对应，**只纠错、不扩写**：用户没敲的意思不要自行补成更长的句子，不要接下文，也不要加任何评论、调侃或语气反应（例如不要出现「我才不学呢」「很高兴认识你」这类用户没打的内容）；
+- 例：shenmegouspiwanyi → 什么狗屁玩意；zhgdoima → 这个东西吗；nihao → 你好。它只替换这段拼音，**不要把 before 的内容抄进来**；
+- 不能有把握地还原成完整一句，就给 null。want_sentence 为 false 时给 null。语言跟随上下文。
 
 不解释、不加引号、不加序号。";
 
@@ -220,10 +221,13 @@ pub fn parse_reply(content: &str, request: &PredictionRequest) -> Reply {
         }
     }
     if request.want_sentence {
+        // 长度护栏：纠错句字数应与所敲音节数相当（缩写允许偏多）；明显更长就是模型在续写扩写，丢弃。
+        let max_chars = (request.syllables + 3).max((request.syllables as f64 * 1.5) as usize);
         reply.sentence = raw
             .sentence
             .map(|s| strip_before(&clean(&s), &request.before))
-            .filter(|s| !s.is_empty() && Some(s.as_str()) != first_local);
+            .filter(|s| !s.is_empty() && Some(s.as_str()) != first_local)
+            .filter(|s| request.syllables == 0 || s.chars().count() <= max_chars);
     }
     reply
 }
@@ -327,26 +331,57 @@ mod tests {
                 ("章台", vec!["zhang", "tai"])
             ]
         );
-        assert_eq!(parsed.sentence.as_deref(), Some("账套已经建好了"));
+        // 只敲了两个音节，模型却扩写成七个字的句子：按纠错语义丢弃
+        assert_eq!(parsed.sentence, None);
         // 没要整句就不收
         assert_eq!(
             parse_reply(reply, &request("zhang'tao", false)).sentence,
             None
         );
-        // 整句里抄了 before 的，去掉重叠部分
-        let echoed = r#"{"words": [], "sentence": "我们今天账套已经建好了"}"#;
+        // 与音节数相当的纠错句保留
+        let corrected = r#"{"words": [], "sentence": "账套"}"#;
         assert_eq!(
-            parse_reply(echoed, &request("zhang'tao", true))
+            parse_reply(corrected, &request("zhang'tao", true))
                 .sentence
                 .as_deref(),
-            Some("账套已经建好了")
+            Some("账套")
         );
-        let partial = r#"{"words": [], "sentence": "今天账套已经建好了"}"#;
+    }
+
+    #[test]
+    fn strip_before_removes_echoed_context_prefix() {
+        // 模型把光标前的 before 抄进了句首，去掉重叠部分
         assert_eq!(
-            parse_reply(partial, &request("zhang'tao", true))
+            strip_before("我们今天账套已经建好了", "我们今天"),
+            "账套已经建好了"
+        );
+        assert_eq!(
+            strip_before("今天账套已经建好了", "我们今天"),
+            "账套已经建好了"
+        );
+        // 没有重叠就原样返回
+        assert_eq!(strip_before("账套已经建好了", "我们今天"), "账套已经建好了");
+    }
+
+    #[test]
+    fn over_long_sentence_is_treated_as_expansion_and_dropped() {
+        let mut req = request("shen'me'gou'spi'wan'yi", true);
+        req.syllables = 6;
+        // 与音节数相当的纠错句保留
+        assert_eq!(
+            parse_reply(r#"{"words": [], "sentence": "什么狗屁玩意"}"#, &req)
                 .sentence
                 .as_deref(),
-            Some("账套已经建好了")
+            Some("什么狗屁玩意")
+        );
+        // 明显更长 = 模型在续写，丢弃
+        assert_eq!(
+            parse_reply(
+                r#"{"words": [], "sentence": "什么狗屁玩意，我才不学呢"}"#,
+                &req
+            )
+            .sentence,
+            None
         );
     }
 

@@ -48,8 +48,12 @@ pub struct Frame {
     #[serde(default)]
     pub aux_code_show: bool,
 
-    /// 整句补全（云联想给的整段拼音的整句结果）：画在 preedit 行右侧，按 Tab 上屏。无则 `None`。
+    /// 中文整句纠错或补全（云端）：画在拼音行下方，按 Tab 上屏。无则 `None`。
     pub sentence: Option<String>,
+
+    /// 组句中文的外文译文（本地翻译模型）：画在拼音行右侧，只展示、不上屏。无则 `None`。
+    #[serde(default)]
+    pub translation: Option<String>,
 
     /// 屏幕提示（删候选后的「已删除…」一句）：画在 preedit 行下方，显示到下一次按键。无则 `None`。
     /// 不参与 [`is_empty`](Self::is_empty)：单有提示不算在组句，否则空组句也会撑开候选窗口。

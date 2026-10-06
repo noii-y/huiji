@@ -29,7 +29,10 @@ pub(crate) struct RenderData {
     /// 页码，只有多页时有。
     pub(super) footer: Option<String>,
 
-    /// 整句补全，画在拼音行右侧。
+    /// 外文译文，画在拼音行右侧（只展示）。
+    pub(super) translation: Option<String>,
+
+    /// 中文整句纠错，画在拼音行下方（Tab 上屏）。
     pub(super) sentence: Option<String>,
 
     /// 屏幕提示（删候选后的「已删除…」），画在拼音行下方。
@@ -54,6 +57,7 @@ impl RenderData {
             rows: Vec::new(),
             highlight: usize::MAX,
             footer: None,
+            translation: None,
             sentence: None,
             notice: None,
             layout: LayoutMode::default(),
@@ -79,6 +83,7 @@ impl RenderData {
         self.footer =
             (frame.page_count > 1).then(|| format!("{}/{}", frame.page + 1, frame.page_count));
         self.sentence = frame.sentence.clone();
+        self.translation = frame.translation.clone();
         self.notice = frame.notice.clone();
     }
 
@@ -108,6 +113,7 @@ impl RenderData {
             columns: 0,
             column_ems: Vec::new(),
             footer: self.footer.clone(),
+            translation: self.translation.clone(),
             sentence: self.sentence.clone(),
             status: self.notice.clone(),
         }

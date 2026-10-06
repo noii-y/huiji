@@ -30,7 +30,7 @@ pub use self::code::find_code_table;
 use self::composed::Composed;
 pub use self::config::RouterConfig;
 use self::reload::ConfigReload;
-pub use self::reload::{DataDirs, attach_cloud};
+pub use self::reload::{DataDirs, attach_predictors};
 pub use self::rescore::find_model;
 use self::rescore::{ModelLoader, RescoreState};
 use self::session::SessionInfo;
@@ -66,11 +66,11 @@ pub struct Router {
     /// 「翻译选中文字」请求号计数器。
     selection_seq: u64,
 
-    /// 整句补全（preedit 右侧、Tab 上屏）；缓冲变化时清空。
+    /// 中文整句纠错（云端，拼音行下方、Tab 上屏）；缓冲变化时清空。
     sentence: Option<String>,
 
-    /// 挂的是端侧翻译器：sentence 是英文译文、仅供参考，Tab 不上屏（照常翻页）。
-    local_translation: bool,
+    /// 组句中文的外文译文（端侧翻译，拼音行右侧、只展示不上屏）；缓冲变化时清空。
+    compose_translation: Option<String>,
 
     /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
     notice: Option<String>,
@@ -137,7 +137,7 @@ impl Router {
             pending_selection: None,
             selection_seq: 0,
             sentence: None,
-            local_translation: false,
+            compose_translation: None,
             notice: None,
             highlight: 0,
             navigated: false,

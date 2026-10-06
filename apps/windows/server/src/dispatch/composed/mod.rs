@@ -14,6 +14,7 @@ impl Router {
         self.highlight = 0;
         self.navigated = false;
         self.sentence = None;
+        self.compose_translation = None;
         if self.engine.composition().is_empty() {
             self.composed = None;
             self.cancel_prediction();
@@ -78,8 +79,18 @@ impl Router {
                 .into_iter()
                 .map(CloudWord::into_candidate)
                 .collect();
-            layout.set_cloud(words);
-            self.sentence = prediction.sentence;
+            // DualPredictor 把云端纠错（sentence）和端侧译文（translation）分两条回、字段互补：
+            // 空词不覆盖已并入的云端词，sentence / translation 只并入本次新到的 Some，
+            // 避免后到的一条（云端约 1 秒）带着空字段冲掉先到的另一条（端侧约 50 毫秒）。
+            if !words.is_empty() {
+                layout.set_cloud(words);
+            }
+            if prediction.sentence.is_some() {
+                self.sentence = prediction.sentence;
+            }
+            if prediction.translation.is_some() {
+                self.compose_translation = prediction.translation;
+            }
         }
     }
 
@@ -212,6 +223,7 @@ impl Router {
                 theme: self.config.theme,
                 aux_code_show: self.config.aux_code_show,
                 sentence: None,
+                translation: None,
                 notice: self.notice.clone(),
             },
             Some(Composed::Candidates {
@@ -242,6 +254,7 @@ impl Router {
                     theme: self.config.theme,
                     aux_code_show: self.config.aux_code_show,
                     sentence: self.sentence.clone(),
+                    translation: self.compose_translation.clone(),
                     notice: self.notice.clone(),
                 }
             }

@@ -140,6 +140,7 @@ impl Router {
                 theme: self.config.theme,
                 aux_code_show: false,
                 sentence: None,
+                translation: None,
                 notice: self.notice.clone(),
             },
             Some(Composed::Candidates {
@@ -179,6 +180,7 @@ impl Router {
                     theme: self.config.theme,
                     aux_code_show: false,
                     sentence: self.sentence.clone(),
+                    translation: None,
                     notice: self.notice.clone(),
                 }
             }

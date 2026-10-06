@@ -21,6 +21,7 @@ fn question_mode_asks_the_cloud_and_shows_answers_unvalidated() {
             sequence: 1,
             words: vec![restated, answer],
             sentence: None,
+            translation: None,
         }],
         sentence: true,
     };
@@ -224,11 +225,13 @@ fn stale_predictions_are_dropped_and_accept_clears_composition() {
                     cloud("凯发", &["kai", "fa"]),
                 ],
                 sentence: Some("开发输入法".into()),
+                translation: None,
             },
             Prediction {
                 sequence: 1,
                 words: Vec::new(),
                 sentence: Some("旧结果".into()),
+                translation: None,
             },
         ],
     }));
@@ -265,6 +268,7 @@ fn cloud_words_tolerate_typos_but_not_unrelated_words() {
                 cloud("知道", &["zhi", "dao"]),
             ],
             sentence: None,
+            translation: None,
         }],
     }));
     engine.set_input("zhgdoima");
@@ -302,6 +306,7 @@ fn cloud_words_are_validated_against_abbreviated_pinyin() {
                 cloud("不是音节", &["zx", "tq", "a", "b"]),
             ],
             sentence: None,
+            translation: None,
         }],
     }));
     engine.set_input("zt");
@@ -449,6 +454,7 @@ fn traditional_mode_preserves_original_text_across_queries() {
                 sequence: 1,
                 words: vec![cloud("凯发", &["kai", "fa"])],
                 sentence: None,
+                translation: None,
             }],
         }))
         .with_learner(Box::new(WordLearner::default()));
