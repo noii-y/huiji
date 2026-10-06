@@ -98,5 +98,55 @@ pub fn transition_log_prob(
     fallback: f64,
 ) -> f64 {
     let base = model.log_prob(context.previous, word).unwrap_or(fallback);
-    personal.blend(context, word, base)
+    personal.blend(context, word, base) + repetition_penalty(context.previous, word)
+}
+
+/// 相邻重复扣分的力度：模型没见过的搭配按一元词频兜底时，叠字（就是是）会被高频字抬上来，
+/// 用这个扣分把它压回正常说法（就是说）之后。
+pub const REPEAT_PENALTY: f64 = -4.0;
+
+/// 边界上的相邻重复：整词重复（北京｜北京），或单字词正好等于上一个词的末字（就是｜是 → 就是是）。
+///
+/// 只认这两种，避免误伤：正常的叠词（谢谢、看看）本身是整词、走整词查找不经此路径；
+/// 中国｜国家 这类后词是多字词的正常搭配，边界虽有同字也不扣。
+pub fn repetition_penalty(previous: Option<&str>, word: &str) -> f64 {
+    let Some(previous) = previous else {
+        return 0.0;
+    };
+    let whole_word_repeat = previous == word;
+    let single_char_doubled = word.chars().count() == 1
+        && previous
+            .chars()
+            .next_back()
+            .is_some_and(|last| word.starts_with(last));
+    if whole_word_repeat || single_char_doubled {
+        REPEAT_PENALTY
+    } else {
+        0.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repetition_penalty;
+
+    #[test]
+    fn single_char_doubling_a_word_end_is_penalized() {
+        // 就是｜是 → 就是是：单字词 是 与上一个词末字相同，扣分
+        assert!(repetition_penalty(Some("就是"), "是") < 0.0);
+        // 整词重复也扣
+        assert!(repetition_penalty(Some("北京"), "北京") < 0.0);
+        // 单字相邻重复（是｜是）扣
+        assert!(repetition_penalty(Some("是"), "是") < 0.0);
+    }
+
+    #[test]
+    fn normal_boundary_with_same_char_is_not_penalized() {
+        // 中国｜国家：后词是多字词，虽然边界 国 相同，属正常搭配，不扣
+        assert_eq!(repetition_penalty(Some("中国"), "国家"), 0.0);
+        // 无上文（句首）不扣
+        assert_eq!(repetition_penalty(None, "是"), 0.0);
+        // 普通衔接不扣
+        assert_eq!(repetition_penalty(Some("我"), "去"), 0.0);
+    }
 }
