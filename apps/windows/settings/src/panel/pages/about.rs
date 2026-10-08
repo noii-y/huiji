@@ -27,7 +27,7 @@ const ATTRIBUTIONS: &[(&str, &str)] = &[
         "语言模型",
         "中文维基百科（CC BY-SA 4.0）与 LCCC（清华大学 CoAI，MIT）语料统计。",
     ),
-    ("释义表", "由大语言模型（DeepSeek）生成，青简自建。"),
+    ("释义表", "由大语言模型（DeepSeek）生成，灰迹自建。"),
     ("emoji", "Unicode CLDR annotations（Unicode License v3）。"),
     (
         "英文词表",
@@ -36,10 +36,6 @@ const ATTRIBUTIONS: &[(&str, &str)] = &[
     (
         "词汇等级",
         "CEFR-J Wordlist v1.5（Yukio Tono，cefr-j.org）；Octanove Vocabulary Profile C1/C2（CC BY-SA 4.0）；JLPT 词表（tanos.co.uk，CC BY）。",
-    ),
-    (
-        "五笔码表",
-        "86 五笔极点码表（sxjudya/rime-wubi86-jidian，Apache-2.0）；编码来自上游，词频由青简词库按词面回填。",
     ),
     (
         "笔画码表",
@@ -106,7 +102,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             .children((
                 Button::new()
                     .on_click(context.message(Message::OpenWebsite))
-                    .content("官网"),
+                    .content("项目主页"),
                 Button::new()
                     .on_click(context.message(Message::OpenRepository))
                     .content("GitHub"),

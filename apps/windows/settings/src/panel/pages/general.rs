@@ -14,19 +14,18 @@ pub(crate) const LANGUAGES: [(&str, &str); 4] = [
     ("不显示译文", "off"),
 ];
 
-/// 输入方案：界面名 + 配置写法，直接照 [`Scheme::ALL`] 建，不另抄一份。
-/// 数组长度取自 `ALL`，以后加方案时这里数组对不上就编不过。
-pub(crate) const SCHEMES: [(&str, &str); Scheme::ALL.len()] = [
-    (Scheme::ALL[0].label(), Scheme::ALL[0].key()),
-    (Scheme::ALL[1].label(), Scheme::ALL[1].key()),
-    (Scheme::ALL[2].label(), Scheme::ALL[2].key()),
-    (Scheme::ALL[3].label(), Scheme::ALL[3].key()),
-    (Scheme::ALL[4].label(), Scheme::ALL[4].key()),
-    (Scheme::ALL[5].label(), Scheme::ALL[5].key()),
-    (Scheme::ALL[6].label(), Scheme::ALL[6].key()),
-    (Scheme::ALL[7].label(), Scheme::ALL[7].key()),
-    (Scheme::ALL[8].label(), Scheme::ALL[8].key()),
-    (Scheme::ALL[9].label(), Scheme::ALL[9].key()),
+/// 输入方案：界面名 + 配置写法，直接照 [`Scheme::COMMON`] 建，不另抄一份。
+/// 数组长度取自 `COMMON`，以后加方案时这里数组对不上就编不过。
+pub(crate) const SCHEMES: [(&str, &str); Scheme::COMMON.len()] = [
+    (Scheme::COMMON[0].label(), Scheme::COMMON[0].key()),
+    (Scheme::COMMON[1].label(), Scheme::COMMON[1].key()),
+    (Scheme::COMMON[2].label(), Scheme::COMMON[2].key()),
+    (Scheme::COMMON[3].label(), Scheme::COMMON[3].key()),
+    (Scheme::COMMON[4].label(), Scheme::COMMON[4].key()),
+    (Scheme::COMMON[5].label(), Scheme::COMMON[5].key()),
+    (Scheme::COMMON[6].label(), Scheme::COMMON[6].key()),
+    (Scheme::COMMON[7].label(), Scheme::COMMON[7].key()),
+    (Scheme::COMMON[8].label(), Scheme::COMMON[8].key()),
 ];
 
 pub(crate) fn string_combo(
@@ -41,7 +40,8 @@ pub(crate) fn string_combo(
 }
 
 /// Shift+字母的下拉：选项直接由 [`ShiftLetter::ALL`] 生成，免得再抄一份表（顺序要和它一致）。
-fn shift_letter_combo(current: ShiftLetter, callback: Callback<Option<usize>>) -> ComboBox {
+/// 通用页与高级页都用它，所以放开可见性。
+pub(crate) fn shift_letter_combo(current: ShiftLetter, callback: Callback<Option<usize>>) -> ComboBox {
     ComboBox::new()
         .items_source(ShiftLetter::ALL.iter().map(|mode| mode.label()))
         .selected_index(ShiftLetter::ALL.iter().position(|mode| *mode == current))
@@ -50,7 +50,6 @@ fn shift_letter_combo(current: ShiftLetter, callback: Callback<Option<usize>>) -
 
 pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> View {
     let g = &settings.config.general;
-    let english_off = !settings.config.apps.english_candidates_off.is_empty();
     let rows = [
         field(
             "学习语言",
@@ -60,6 +59,19 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 &g.learning_language,
                 context.callback(Message::LearningLanguage),
             ),
+        ),
+        field(
+            "中英切换键",
+            "勾上的键都能在中英之间切换，可以多选，改完立刻生效；中英模式所有应用共用一份。打字时容易误触 Shift 的话改勾「单击 Ctrl」；一个都不勾时只剩任务栏 / 悬浮状态条上的「中」「英」按钮。\
+             系统自带的 Ctrl + Space 也能切中英，与微软拼音一致，不用勾（装了别的输入法时 Windows 可能改用它切换输入法）。",
+            switch_key_boxes(settings, context),
+        ),
+        field(
+            "启用内置英文模式",
+            "关掉后灰迹固定中文模式：切换键与任务栏、悬浮状态条上的「中」「英」按钮都不再切到英文，需要英文时用系统快捷键（Win + Space）切到别的输入法。",
+            ToggleSwitch::new()
+                .is_on(g.english_mode)
+                .on_toggled(context.callback(Message::EnglishMode)),
         ),
         field(
             "每页候选数",
@@ -72,7 +84,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         ),
         field(
             "拼音方案",
-            "全拼、五套双拼、大千注音，或关（只用下面的五笔）。\
+            "全拼、七套双拼、大千注音。\
              双拼下 v、u、i 是音节键，表达式与问字模式改用 Shift+V、Shift+U 进（微软、搜狗方案的 ; 键是 ing）；\
              注音下 v、u、i 也是按键，只能用 ? 开头进。",
             string_combo(
@@ -80,23 +92,6 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 g.scheme().key(),
                 context.callback(Message::Scheme),
             ),
-        ),
-        field(
-            "双拼在输入框显示原始按键",
-            "勾上后双拼模式下输入框（光标处）显示敲击的英文字母，回车可直接上屏；候选窗口顶部的拼音行照旧显示解码全拼。",
-            ToggleSwitch::new()
-                .is_on(g.shuangpin_raw_preedit)
-                .is_enabled(g.scheme().is_shuangpin())
-                .on_toggled(context.callback(Message::ShuangpinRawPreedit)),
-        ),
-        field(
-            "五笔（86 版）",
-            "与拼音方案同时开着就是混输：编码打全的五笔词在前，打不出的字直接打拼音。\
-             单用五笔请把拼音方案关掉；第 5 个字母起五笔查不到东西，自动只剩拼音。\
-             译词、生词记录与学习照常。",
-            ToggleSwitch::new()
-                .is_on(g.wubi())
-                .on_toggled(context.callback(Message::Wubi)),
         ),
         field(
             "繁体输出",
@@ -113,54 +108,13 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_toggled(context.callback(Message::FullWidthPunctuation)),
         ),
         field(
-            "英文模式标点转全角",
-            "中英各记一份，缺省英文半角。",
-            ToggleSwitch::new()
-                .is_on(g.english_full_width_punctuation)
-                .on_toggled(context.callback(Message::EnglishFullWidthPunctuation)),
-        ),
-        field(
             "英文模式（Caps Lock）也给候选",
             "Tab 或方向键选词；空格、回车、标点仍原样上屏敲的字母，不选词时与直接打字一样。",
             ToggleSwitch::new()
                 .is_on(g.english_candidates)
                 .on_toggled(context.callback(Message::EnglishCandidates)),
         ),
-        field(
-            "但在终端和代码编辑器里不给",
-            "终端、Windows Terminal、VS Code、Cursor、JetBrains 等，那里的候选窗口会挡住应用自己的补全；名单可在配置文件里改。",
-            ToggleSwitch::new()
-                .is_on(english_off)
-                .is_enabled(g.english_candidates)
-                .on_toggled(context.callback(Message::EnglishOffInApps)),
-        ),
-        field(
-            "输入拼音时中文候选排在英文词前面",
-            "开着时整段输入是英文词时（hello、key）英文词排第二，空格上屏的仍是中文；关着（缺省）拼音不成立的输入英文词排第一。",
-            ToggleSwitch::new()
-                .is_on(g.chinese_first)
-                .on_toggled(context.callback(Message::ChineseFirst)),
-        ),
         feedback(&settings.notice),
-        field(
-            "中文模式下的 Shift + 字母",
-            "「交给应用」是临时打英文（与以前一致）：拼音先上屏，这个键归应用；\
-             「进组句」把它收进拼音缓冲区，匹配时按小写算，所以 Cpan 与 cpan 一样能出「C盘」。",
-            shift_letter_combo(g.shift_letter, context.callback(Message::ShiftLetter)),
-        ),
-        field(
-            "中英切换键",
-            "勾上的键都能在中英之间切换，可以多选，改完立刻生效；中英模式所有应用共用一份。打字时容易误触 Shift 的话改勾「单击 Ctrl」；一个都不勾时只剩任务栏 / 悬浮状态条上的「中」「英」按钮。\
-             系统自带的 Ctrl + Space 也能切中英，与微软拼音一致，不用勾（装了别的输入法时 Windows 可能改用它切换输入法）。",
-            switch_key_boxes(settings, context),
-        ),
-        field(
-            "启用内置英文模式",
-            "关掉后灰迹固定中文模式：切换键与任务栏、悬浮状态条上的「中」「英」按钮都不再切到英文，需要英文时用系统快捷键（Win + Space）切到别的输入法。",
-            ToggleSwitch::new()
-                .is_on(g.english_mode)
-                .on_toggled(context.callback(Message::EnglishMode)),
-        ),
     ];
     page("通用", StackPanel::new().spacing(16.0).children(rows))
 }

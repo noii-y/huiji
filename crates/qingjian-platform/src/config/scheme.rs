@@ -43,6 +43,20 @@ impl Scheme {
         Self::Off,
     ];
 
+    /// Windows 设置「拼音方案」下拉用这一套：不含「关（只用形码）」。
+    /// 灰迹不提供形码，没有把拼音整个关掉的用法；`Off` 只留给核心识别旧配置，不对用户暴露。
+    pub const COMMON: [Self; 9] = [
+        Self::Pinyin,
+        Self::Shuangpin(ShuangpinScheme::Xiaohe),
+        Self::Shuangpin(ShuangpinScheme::Ziranma),
+        Self::Shuangpin(ShuangpinScheme::Microsoft),
+        Self::Shuangpin(ShuangpinScheme::Sogou),
+        Self::Shuangpin(ShuangpinScheme::Abc),
+        Self::Shuangpin(ShuangpinScheme::Xiaolang),
+        Self::Shuangpin(ShuangpinScheme::Shoudao),
+        Self::Zhuyin,
+    ];
+
     /// 配置文件里的写法。`const`：设置界面按 [`Self::ALL`] 直接建常量表，不再手抄一份。
     pub const fn key(self) -> &'static str {
         match self {

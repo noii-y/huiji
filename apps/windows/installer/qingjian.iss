@@ -1,6 +1,6 @@
-﻿; 青简 Windows 输入法安装脚本（Inno Setup）。
+﻿; 灰迹 Windows 输入法安装脚本（Inno Setup）。
 ;
-; 装到 Program Files\Qingjian（64 位），把 TSF DLL（64 位与 32 位各一份，见 README「安装布局」）、Server、设置程序与随包数据装在一起，
+; 装到 Program Files\Huiji（64 位），把 TSF DLL（64 位与 32 位各一份，见 README「安装布局」）、Server、设置程序与随包数据装在一起，
 ; 然后：① 给安装目录加 ALL APPLICATION PACKAGES 读+执行权限（UWP/AppContainer 应用——任务栏搜索、
 ; 设置——才能加载 DLL）；② regsvr32 注册文本服务，64 位与 32 位各注册一次（图标落到 %ProgramData%\Qingjian）；
 ; ③ 在「启动」文件夹放 Server 快捷方式（登录时由 Explorer 走 ShellExecute 拉起，uiAccess 才生效——
@@ -34,8 +34,13 @@
 #define TsfDll "qingjian_tsf-" + AppVersion + ".dll"
 #define TsfDll32 "qingjian_tsf-" + AppVersion + "-x86.dll"
 ; 端侧整句翻译：CT2 运行时两个 dll 与 Marian 模型的本机来源。必须 ASCII 路径，中文路径 SentencePiece 打不开。
-#define SdkBin "C:\Users\dril\AppData\Local\HuijiSDK\ct2\bin"
-#define ModelSource "C:\Users\dril\AppData\Roaming\Qingjian\models\opus-mt-zh-en-ct2"
+; 缺省取当前用户目录；换机器或 CI 上用 iscc /DSdkBin=... /DModelSource=... 覆盖。
+#ifndef SdkBin
+  #define SdkBin GetEnv("LOCALAPPDATA") + "\HuijiSDK\ct2\bin"
+#endif
+#ifndef ModelSource
+  #define ModelSource GetEnv("APPDATA") + "\Qingjian\models\opus-mt-zh-en-ct2"
+#endif
 
 [Setup]
 AppId={{A7E3C1F2-5B94-4D6A-9C0E-2F8B1D3A6E70}
@@ -44,7 +49,7 @@ AppVersion={#AppVersion}
 AppPublisher={#Publisher}
 AppSupportURL={#WebsiteUrl}
 VersionInfoVersion={#AppVersionNumeric}
-DefaultDirName={autopf}\Qingjian
+DefaultDirName={autopf}\Huiji
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 ArchitecturesAllowed=x64compatible
@@ -101,10 +106,6 @@ Source: "{#Repo}\assets\emoji\emoji-zh.tsv";     DestDir: "{app}\assets\emoji"; 
 Source: "{#Repo}\assets\emoji\emoji-en.tsv";     DestDir: "{app}\assets\emoji";  Flags: ignoreversion
 Source: "{#Repo}\assets\levels\levels-en.tsv";   DestDir: "{app}\assets\levels"; Flags: ignoreversion
 Source: "{#Repo}\assets\levels\levels-ja.tsv";   DestDir: "{app}\assets\levels"; Flags: ignoreversion
-; 五笔码表（输入方案选五笔时用，见 assets/wubi/README.md；极点 86 码表，Apache-2.0）。
-; 走 assets\ 与 emoji / levels 一致，Server 的 `dispatch::code::find_code_table` 照同一个相对路径找，
-; 开发布局（cargo run）也对得上
-Source: "{#Repo}\assets\wubi\wubi86.tsv";        DestDir: "{app}\assets\wubi";   Flags: ignoreversion
 Source: "{#Repo}\assets\sample\dict.tsv";        DestDir: "{app}\assets\sample"; Flags: ignoreversion
 ; —— 端侧整句翻译：两个运行时 dll 放 Server 同目录，模型装 data\models（find_translation_model 的候选之一）——
 Source: "{#SdkBin}\ctranslate2.dll";   DestDir: "{app}"; Flags: ignoreversion

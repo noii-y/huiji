@@ -11,7 +11,6 @@ pub(crate) enum Message {
     PageSize(Option<f64>),
     Scheme(Option<usize>),
     ShuangpinRawPreedit(bool),
-    Wubi(bool),
     Traditional(bool),
     EnglishCandidates(bool),
     ChineseFirst(bool),

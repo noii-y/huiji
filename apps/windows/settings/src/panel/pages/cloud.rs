@@ -43,21 +43,21 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
     let rows = [
         field(
             "本地整句模型",
-            "随包的小模型在本机给整句候选重新排序，全程离线；停键后几十毫秒生效。关掉只用词库统计。",
+            "本机神经模型给整句候选重新排序，全程离线。默认不附带该模型，需自行放入数据目录才生效，否则开关无作用；关闭后只用词库统计。",
             ToggleSwitch::new()
                 .is_on(settings.config.model.enabled)
                 .on_toggled(context.callback(Message::LocalModel)),
         ),
         field(
-            "启用云联想",
-            "开启后组句时会把光标附近的几十个字发给下面的服务，让模型补全整句、联想下文；密钥框里的内容不发送。",
+            "启用云端纠错",
+            "开启后组句时会把光标附近的几十个字发给下面的服务，让模型把打错、打漏的拼音还原成你本来想写的中文，只纠错、不扩写不续写；密钥框里的内容不发送。",
             ToggleSwitch::new()
                 .is_on(p.enabled)
                 .on_toggled(context.callback(Message::CloudEnabled)),
         ),
         field(
             "云端词格数",
-            "云端词到了只补进第一页末尾这几格，前面的本地候选不动；没到就什么都不变。0 = 只要整句补全。",
+            "云端词到了只补进第一页末尾这几格，前面的本地候选不动；没到就什么都不变。0 = 只给整句纠错。",
             NumberBox::new()
                 .minimum(0.0)
                 .maximum(9.0)
@@ -65,8 +65,8 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_value_changed(context.callback(Message::CloudSlots)),
         ),
         field(
-            "整句补全",
-            "preedit 右侧给出整句补全，按 Tab 采用。",
+            "整句纠错",
+            "preedit 右侧给出整句纠错结果，按 Tab 采用。",
             ToggleSwitch::new()
                 .is_on(p.sentence)
                 .on_toggled(context.callback(Message::CloudSentence)),
