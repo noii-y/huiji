@@ -30,5 +30,7 @@ ct2rs = { version = "0.10", optional = true, default-features = false, features 
 local-nmt = ["dep:ct2rs", "ct2rs/ruy"]
 # 满血 oneMKL：Windows 静态 MKL 实测运行时不被 CT2 识别（No SGEMM），暂不可用，保留备查
 local-nmt-mkl = ["dep:ct2rs", "ct2rs/mkl"]
-# 满血预编译：链接现成 ctranslate2.dll（内含 oneDNN），快；需 LIBRARY_PATH 指向 SDK 的 lib 目录
+# 满血预编译：链接现成 ctranslate2.dll（内含 oneDNN），快；需 LIBRARY_PATH 指向 SDK 的 lib 目录。
+# Windows 上 ct2rs 的 system 后端还会无条件要求 cublas/cublasLt 两个静态库（即便只用 CPU）；
+# 我们在 SDK lib 目录放空占位库满足链接，CPU 推理不调用 CUDA。
 local-nmt-system = ["dep:ct2rs", "ct2rs/system"]
