@@ -34,6 +34,50 @@ if ($Sign) {
     Write-Host 'uiAccess=0（对外分发：Server 任何机器都能起；候选窗在商店 / 任务栏搜索里可能被盖）' -ForegroundColor Cyan
 }
 
+# ct2rs 的 system 后端在 Windows 上会让链接器去找 cublas / cublasLt（x86_64 还要 cpu_features）几个静态库，
+# 即便最终只走 CPU、没有符号真的引用它们；缺了报 LNK1104「打不开文件」。缺库时用 MSVC 编一个不引头的空目标，
+# 各自打成静态库占位：链接器打开后没有要解析的符号就跳过，CPU 推理不碰 CUDA。
+function Ensure-CudaStubLibs {
+    param([string]$LibDir)
+    $stubNames = @('cublas.lib', 'cublasLt.lib', 'cpu_features.lib')
+    $missing = @($stubNames | Where-Object { -not (Test-Path (Join-Path $LibDir $_)) })
+    if ($missing.Count -eq 0) { return }
+    Write-Host "缺链接占位库 $($missing -join ', ')，自动生成…" -ForegroundColor Cyan
+
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+    if (-not (Test-Path $vswhere)) { throw "缺占位库且找不到 vswhere（$vswhere）：装 VS 的 C++ 工具链，或手工放 $($missing -join ', ')" }
+    $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if (-not $vsPath) { throw 'vswhere 没找到带 C++ x64 工具的 Visual Studio' }
+    $toolVer = Get-ChildItem (Join-Path $vsPath 'VC\Tools\MSVC') -Directory | Sort-Object Name -Descending | Select-Object -First 1
+    $hostBin = Join-Path $toolVer.FullName 'bin\Hostx64\x64'
+    $cl = Join-Path $hostBin 'cl.exe'
+    $lib = Join-Path $hostBin 'lib.exe'
+    if (-not (Test-Path $cl) -or -not (Test-Path $lib)) { throw "在 $hostBin 找不到 cl.exe / lib.exe" }
+
+    New-Item -ItemType Directory -Path $LibDir -Force | Out-Null
+    $tmp = Join-Path $env:TEMP ("huiji-stub-" + [IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    $cpp = Join-Path $tmp 'stub.cpp'
+    # 不 include 任何头，编译就不需要 INCLUDE 环境；符号没人引用，只为让 lib.exe 有东西可打包。
+    [IO.File]::WriteAllText($cpp, 'int huiji_cuda_link_stub() { return 0; }')
+    $obj = Join-Path $tmp 'stub.obj'
+    $prevPath = $env:Path
+    $env:Path = "$hostBin;$env:Path"
+    try {
+        & $cl /nologo /c /MT $cpp "/Fo$obj" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'cl.exe 编译占位目标失败' }
+        foreach ($name in $missing) {
+            $out = Join-Path $LibDir $name
+            & $lib /nologo "/OUT:$out" $obj | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "lib.exe 生成占位库 $name 失败" }
+        }
+    } finally {
+        $env:Path = $prevPath
+        Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "占位库已生成 → $LibDir" -ForegroundColor Green
+}
+
 # 1) 构建三个产物。
 if (-not $SkipBuild) {
     Write-Host '构建 release 产物…' -ForegroundColor Cyan
@@ -44,6 +88,7 @@ if (-not $SkipBuild) {
         # Server 带端侧整句翻译：local-nmt-system 链接本机预编译 CT2 dll，LIBRARY_PATH 指向 .lib 目录。
         $sdkLib = Join-Path $env:LOCALAPPDATA 'HuijiSDK\ct2\lib'
         if (-not (Test-Path (Join-Path $sdkLib 'ctranslate2.lib'))) { throw "端侧翻译 SDK 不在：$sdkLib" }
+        Ensure-CudaStubLibs -LibDir $sdkLib
         $env:LIBRARY_PATH = $sdkLib
         cargo build --release --locked -p qingjian-windows-server --features local-nmt-system
         if ($LASTEXITCODE -ne 0) { throw "Server cargo build 失败（退出码 $LASTEXITCODE）" }
