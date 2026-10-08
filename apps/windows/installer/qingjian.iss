@@ -295,6 +295,19 @@ begin
   end;
 end;
 
+{ 装完立即以原（非提升）用户 ShellExecute 起一次 Server，静默 / 非静默都走这里，不必先注销。
+  没有可交互的原用户时（登录前的无人值守部署）会失败，安静跳过，下次登录由「启动」文件夹快捷方式起。
+  uiAccess=true 的 exe 不能用 CreateProcess / runasoriginaluser 拉（报 740），必须经 ShellExecute
+  走 AppInfo，才会授予 uiAccess 高 z-band 权限。Server 自己的单实例互斥体会消化掉任何重复启动。 }
+procedure StartServerAsOriginalUser;
+var
+  ErrorCode: Integer;
+begin
+  ShellExecAsOriginalUser(
+    '', ExpandConstant('{app}\qingjian-server.exe'), '', '',
+    SW_SHOWNORMAL, ewNoWait, ErrorCode);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
@@ -302,6 +315,7 @@ begin
     DeleteLegacyLogonTask;
     DeleteStaleDlls;
     DeleteRetiredServers;
+    StartServerAsOriginalUser;
   end;
 end;
 
@@ -310,18 +324,4 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
     RetireServerExe;
-end;
-
-{ 装完在完成页点 Finish 后立即起一次 Server。
-  uiAccess=true 的 exe 不能用 CreateProcess / runasoriginaluser 拉起（报 740），
-  必须以原（非提升）用户身份 ShellExecute（等同双击），AppInfo 才会授予 uiAccess 高 z-band 权限。 }
-function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  ErrorCode: Integer;
-begin
-  Result := True;
-  if (CurPageID = wpFinished) and (not WizardSilent) then
-    ShellExecAsOriginalUser(
-      '', ExpandConstant('{app}\qingjian-server.exe'), '', '',
-      SW_SHOWNORMAL, ewNoWait, ErrorCode);
 end;

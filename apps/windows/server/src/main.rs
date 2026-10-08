@@ -23,6 +23,53 @@ fn current_session_id() -> u32 {
     session
 }
 
+/// 单实例保险的结果：拿到 / 已有实例 / 系统调用失败（不阻塞启动）。
+#[cfg(windows)]
+enum SingleInstanceOutcome {
+    Acquired(SingleInstance),
+    AlreadyRunning,
+    Unavailable,
+}
+
+/// 持有本会话单实例互斥体的句柄，进程结束时释放。
+#[cfg(windows)]
+struct SingleInstance(windows::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl Drop for SingleInstance {
+    fn drop(&mut self) {
+        let _ = unsafe { windows::Win32::Foundation::CloseHandle(self.0) };
+    }
+}
+
+/// 本会话只允许一个 Server：在 main 最早期建命名互斥体，第二个实例立即退出。
+///
+/// 安装器装完会起一次、已开应用里的 DLL 连不上也会起、登录时快捷方式还会起——多条路径
+/// 可能同时拉，靠这里保证只活一个，否则同会话会出现两条状态条、两个候选窗。名字带会话后缀、
+/// 用 `Local\` 前缀，和命名管道一致，多个 RDP 会话各有一个。
+#[cfg(windows)]
+fn acquire_single_instance() -> SingleInstanceOutcome {
+    use windows::core::{HSTRING, PCWSTR};
+    use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, GetLastError};
+    use windows::Win32::System::Threading::CreateMutexW;
+
+    let name = HSTRING::from(format!("Local\\QingjianServer-{}", current_session_id()));
+    let handle = match unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) } {
+        Ok(handle) => handle,
+        // 互斥体都建不出来：不挡住输入法，退回原来“靠启动时机防重复”。
+        Err(_) => return SingleInstanceOutcome::Unavailable,
+    };
+    // CreateMutex 对“已存在”仍返回有效句柄，要靠 GetLastError 区分；ACCESS_DENIED 也说明
+    // 同名对象已被（可能更高权限的）实例占着——两种都让位。
+    let last = unsafe { GetLastError() };
+    if last == ERROR_ALREADY_EXISTS || last == ERROR_ACCESS_DENIED {
+        let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
+        SingleInstanceOutcome::AlreadyRunning
+    } else {
+        SingleInstanceOutcome::Acquired(SingleInstance(handle))
+    }
+}
+
 /// 用户数据目录 `%APPDATA%\Qingjian`。非 Windows 拿不到。
 fn user_dir() -> Option<PathBuf> {
     qingjian_platform::dirs::user_dir()
@@ -134,6 +181,15 @@ fn init_logging(config: &Config) -> Option<tracing_appender::non_blocking::Worke
 }
 
 fn main() {
+    // 最早期：本会话已有 Server 就以退出码 0 安静退出，不加载引擎、不弹窗；
+    // 互斥体建不出来则不防、照旧启动。句柄留在变量里活到进程结束。
+    #[cfg(windows)]
+    let _single_instance: Option<SingleInstance> = match acquire_single_instance() {
+        SingleInstanceOutcome::Acquired(guard) => Some(guard),
+        SingleInstanceOutcome::AlreadyRunning => std::process::exit(0),
+        SingleInstanceOutcome::Unavailable => None,
+    };
+
     load_env();
 
     // 日志级别取自配置，所以先写模板、读配置，再装日志。
