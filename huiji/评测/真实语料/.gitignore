@@ -1,0 +1,18 @@
+# 第三方原始语料（体积大，可用 prepare_corpus.py 重新下载/清洗，不入库）
+*.csv
+*.tsv
+*.tsv.bz2
+*.zip
+*.tar.gz
+*.bz2
+hlm/
+corpus/
+
+# 全量评测明细（每类几十 MB，可由 run_local_baseline.ps1 重新生成）
+results/*.jsonl
+# 保留约 100 句的云对比明细（体积小，是结论依据）
+!results/cloud_compare_detail.jsonl
+
+# 临时探针 / 下载辅助脚本
+_*.py
+*.tmp
