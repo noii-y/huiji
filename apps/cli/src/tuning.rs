@@ -5,7 +5,7 @@ use qingjian_core::correction::TypoCosts;
 use qingjian_core::sentence::Interpolation;
 
 /// 可调的参数名。
-pub const KEYS: [&str; 11] = [
+pub const KEYS: [&str; 12] = [
     "lambda",
     "k",
     "cap",
@@ -14,6 +14,7 @@ pub const KEYS: [&str; 11] = [
     "substitute",
     "extra",
     "missing",
+    "velar-nasal",
     "typo-cap",
     "correction",
     "correction-transpose",
@@ -43,6 +44,7 @@ pub fn apply(engine: &mut Engine, settings: &[String]) -> Result<(), TuneError> 
             "substitute" => costs.substitute = value,
             "extra" => costs.extra = value,
             "missing" => costs.missing = value,
+            "velar-nasal" => costs.velar_nasal = value,
             "typo-cap" => costs.discount_cap = value,
             "correction" => costs.correction_penalty = value,
             "correction-transpose" => costs.correction_transpose_discount = value,

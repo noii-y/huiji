@@ -42,6 +42,21 @@ pub fn kind(typed: &str, intended: &str) -> Option<TypoKind> {
         .map(|(_, kind)| *kind)
 }
 
+/// 两个音节的差异是否只在前后鼻音尾：保留声母、只在末尾多/少一个 g（in↔ing、en↔eng、an↔ang），
+/// 如 `min`↔`ming`、`gan`↔`gang`、`zhen`↔`zheng`。这是成系统的发音习惯（前后鼻音不分），
+/// 不是随机手滑，也比跨声母换键（`min`→`jin`）更可能，词图里给它单独的低代价
+/// （见 [`crate::correction::TypoCosts::velar_nasal`]）。
+pub fn is_velar_nasal_edit(typed: &str, intended: &str) -> bool {
+    // 较短的写法以 n 结尾（不能已经是 ng），较长的就是它末尾加一个 g。
+    fn by_adding_g(shorter: &str, longer: &str) -> bool {
+        shorter.ends_with('n')
+            && !shorter.ends_with("ng")
+            && longer.len() == shorter.len() + 1
+            && longer.strip_suffix('g') == Some(shorter)
+    }
+    by_adding_g(typed, intended) || by_adding_g(intended, typed)
+}
+
 /// 两个字母在键盘上是否相邻（同排隔壁，或上下排错位挨着的两个）。
 pub fn adjacent(a: char, b: char) -> bool {
     let Some((row_a, col_a)) = position(a) else {
@@ -168,5 +183,23 @@ mod tests {
     #[test]
     fn keeps_the_cheapest_kind_per_variant() {
         assert_eq!(kind("shuo", "shou"), Some(TypoKind::Transpose));
+    }
+
+    #[test]
+    fn velar_nasal_edit_only_covers_terminal_g_keeping_initial() {
+        // 保留声母、只在末尾多/少一个 g（前后鼻音）
+        assert!(is_velar_nasal_edit("min", "ming"));
+        assert!(is_velar_nasal_edit("ming", "min"));
+        assert!(is_velar_nasal_edit("gan", "gang"));
+        assert!(is_velar_nasal_edit("zheng", "zhen"));
+        assert!(is_velar_nasal_edit("xin", "xing"));
+        assert!(is_velar_nasal_edit("chen", "cheng"));
+        // 跨声母替换（min→jin，m 与 j 相邻）不算
+        assert!(!is_velar_nasal_edit("min", "jin"));
+        // 补介音（gan→guan）不是前后鼻音
+        assert!(!is_velar_nasal_edit("gan", "guan"));
+        // 其它一处编辑也不算
+        assert!(!is_velar_nasal_edit("ni", "mi"));
+        assert!(!is_velar_nasal_edit("shou", "shuo"));
     }
 }

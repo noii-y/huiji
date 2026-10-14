@@ -20,6 +20,10 @@ pub struct TypoCosts {
     /// 少敲了一个键（`gan` → `guan`）。
     pub missing: f64,
 
+    /// 前后鼻音尾 g 的多/少（`min`→`ming`、`gan`→`gang`）：声母原样、只在韵母末尾动了一下，
+    /// 属于成系统的发音模糊，而不是随机手滑，代价比相邻键替换还低。
+    pub velar_nasal: f64,
+
     /// 个人敲错表最多给一条边减多少代价：减到只剩 1.0 左右，敲错的解释仍要比原样好一点才排上来。
     pub discount_cap: f64,
 
@@ -39,6 +43,9 @@ impl TypoCosts {
         substitute: 5.0,
         extra: 5.5,
         missing: 5.5,
+        // 前后鼻音是最常见的发音模糊之一：要比「跨声母换相邻键」（substitute 5.0）低，
+        // 实测漏 g 的 `min` 得让 `ming` 拿到约 1.0 以上优势才能压过误碰出来的 `jin`（今天）。
+        velar_nasal: 3.5,
         discount_cap: 3.0,
         correction_penalty: 5.0,
         correction_transpose_discount: 1.0,
@@ -57,6 +64,11 @@ impl TypoCosts {
     /// 词图里一条敲错边的代价：类别的基础代价按个人敲错表打折（见 [`Self::discounted`]）。
     pub fn typo_cost(&self, kind: TypoKind, accepted: u32) -> f64 {
         self.discounted(self.cost(kind), accepted)
+    }
+
+    /// 前后鼻音尾 g 多/少（`min`↔`ming`）这条边的代价，同样按个人敲错表打折。
+    pub fn velar_nasal_cost(&self, accepted: u32) -> f64 {
+        self.discounted(self.velar_nasal, accepted)
     }
 
     /// 整段一处编辑的纠错代价：相邻换位先减 [`Self::correction_transpose_discount`]，再按个人敲错表打折。

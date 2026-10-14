@@ -305,6 +305,33 @@ fn unfinished_last_syllable_is_not_recorded_as_a_typo() {
     }
 }
 
+/// 漏了前后鼻音 g（`min`）时，补 g 的「明」（保留声母、只动韵尾）要压过跨声母碰邻键的「今」；
+/// 精确的 jin 仍出今天，精确的 min 高频词也不被 ming 词抢走。
+#[test]
+fn velar_nasal_final_g_beats_initial_substitution() {
+    let dictionary = Dictionary::parse(
+        "今天\tjin tian\t900000\n明天\tming tian\t800000\n今\tjin\t900000\n明\tming\t800000\n\
+         天\ttian\t1000000\n人民\tren min\t800000\n人名\tren ming\t300000\n人\tren\t900000\n\
+         民\tmin\t400000\n名\tming\t500000\n我\two\t1000000\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dictionary);
+    // 漏了 g：min tian 读 明天（补韵尾，低代价），不是误碰邻键的 今天（换声母，m→j，高代价）
+    engine.set_input("mintian");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "明天");
+    // wo + min + tian 整句同样给 我明天
+    engine.set_input("womintian");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "我明天");
+    // 精确读音不受影响
+    engine.set_input("jintian");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "今天");
+    engine.set_input("mingtian");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "明天");
+    // 精确的 min 高频词（人民）不被 ming 词（人名）抢
+    engine.set_input("renmin");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "人民");
+}
+
 #[test]
 fn fuzzy_rules_add_homophones_behind_exact_hits() {
     // 词库里只有 kai fa 系列加一个 哈；敲 kaiha 没开 f/h 时只有前缀词 开（开哈 原样读得通，词图的敲错边翻不过它），

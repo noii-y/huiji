@@ -30,7 +30,14 @@ impl Engine {
             }
             for (text, kind) in typo::variants(pattern.text) {
                 let accepted = self.learner.typo_count(pattern.text, text);
-                expanded.push_alternative(index, text, self.typo_costs.typo_cost(*kind, accepted));
+                let cost = if typo::is_velar_nasal_edit(pattern.text, &text) {
+                    // 保留声母、只多/少一个前后鼻音尾 g（min→ming）是系统性发音模糊，
+                    // 比跨声母换相邻键（min→jin）更可能，给单独的低代价。
+                    self.typo_costs.velar_nasal_cost(accepted)
+                } else {
+                    self.typo_costs.typo_cost(*kind, accepted)
+                };
+                expanded.push_alternative(index, text, cost);
             }
         }
         expanded
