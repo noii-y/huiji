@@ -1,8 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 
-ASSETS = r"C:\Users\dril\OneDrive\Desktop\灰迹输入法\app\huiji\assets"
-OUT = os.path.join(ASSETS, "huiji-banner.png")
+# 脚本在 huiji/tools/，素材在 huiji/assets/，用相对路径避免写死电脑用户名。
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+OUT = os.path.join(ASSETS, "huiji-banner.webp")
 
 bg = Image.open(os.path.join(ASSETS, "banner-bg-raw.png")).convert("RGBA")
 W, H = bg.size
@@ -75,5 +76,10 @@ draw.text(
     stroke_fill=(20, 20, 23, 255),
 )
 
-bg.convert("RGB").save(OUT, quality=95)
-print("saved", OUT, bg.size)
+final = bg.convert("RGB")
+# README 主视觉在页面上最多约 900px 宽，1800 宽够 2x 视网膜屏；
+# 深色噪点 + 锐利文字用 WebP q86，原图 3.7MB 可压到约 250KB 且肉眼无损。
+target_w = 1800
+final = final.resize((target_w, round(final.height * target_w / final.width)), Image.LANCZOS)
+final.save(OUT, "WEBP", quality=86, method=6)
+print("saved", OUT, final.size)
