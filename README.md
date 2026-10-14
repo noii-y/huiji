@@ -49,6 +49,10 @@
 
 比如手滑漏了字母、把 `womintianxiangxiuxi` 打出去，云端会单独给出一行「我明天想休息」，按 Tab 就上屏。它只做纠错还原，不扩写、不接下文；如果本地首选已经够好，这一行就不出现。
 
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/noii-y/huiji@c9c2592dd235be19d7f4c209807ce72066ddec17/huiji/assets/huiji-cloud.png" alt="云端整句纠错：候选窗里带云朵标记的那一行" width="640">
+</p>
+
 云端默认关闭，需要你自己填一个兼容 OpenAI 接口的 key（DeepSeek 等）。钱是小头：以 DeepSeek Flash 为例，日常打字量每月大约 1～3 元（**测算**，按实际调用量浮动）。密码框等私密字段、文件管理器不会发请求；断网或报错就安静退回本地，不影响打字。
 
 ## 设置与 API 密钥
