@@ -1,7 +1,7 @@
 use qingjian_dictionary::{SyllablePattern, canonical_syllable};
 use serde::{Deserialize, Serialize};
 
-use super::Expanded;
+use super::{EdgeKind, Expanded};
 use crate::parser;
 use crate::ranking::FUZZY_PENALTY;
 
@@ -109,7 +109,14 @@ impl FuzzyRules {
                 .alternatives(*p)
                 .into_iter()
                 .enumerate()
-                .map(|(index, text)| (text, if index == 0 { 0.0 } else { FUZZY_PENALTY }))
+                .map(|(index, text)| {
+                    let kind = if index == 0 {
+                        EdgeKind::Original
+                    } else {
+                        EdgeKind::Fuzzy
+                    };
+                    (text, if index == 0 { 0.0 } else { FUZZY_PENALTY }, kind)
+                })
                 .collect();
             (forms, p.complete)
         }))

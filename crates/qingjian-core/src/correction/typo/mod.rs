@@ -57,6 +57,28 @@ pub fn is_velar_nasal_edit(typed: &str, intended: &str) -> bool {
     by_adding_g(typed, intended) || by_adding_g(intended, typed)
 }
 
+/// 两个音节的差异是否只在翘舌声母：平舌 s/c/z 与翘舌 sh/ch/zh 之间，在声母后多/少一个 h
+/// （`si`↔`shi`、`ci`↔`chi`、`zi`↔`zhi`、`sen`↔`shen`）。这是成系统的发音习惯（平翘舌不分），
+/// 不是随机手滑；词图里给它单独的低代价（见 [`crate::correction::TypoCosts::retroflex`]）。
+pub fn is_retroflex_edit(typed: &str, intended: &str) -> bool {
+    fn by_inserting_h(shorter: &str, longer: &str) -> bool {
+        if longer.len() != shorter.len() + 1 {
+            return false;
+        }
+        // 较短写法以平舌声母 s/c/z 开头（不能已经是 sh/ch/zh），较长写法是它在声母后插一个 h。
+        for (plain, retro) in [("s", "sh"), ("c", "ch"), ("z", "zh")] {
+            if let Some(rest) = shorter.strip_prefix(plain)
+                && !shorter.starts_with(retro)
+                && longer == format!("{retro}{rest}")
+            {
+                return true;
+            }
+        }
+        false
+    }
+    by_inserting_h(typed, intended) || by_inserting_h(intended, typed)
+}
+
 /// 两个字母在键盘上是否相邻（同排隔壁，或上下排错位挨着的两个）。
 pub fn adjacent(a: char, b: char) -> bool {
     let Some((row_a, col_a)) = position(a) else {
@@ -183,6 +205,25 @@ mod tests {
     #[test]
     fn keeps_the_cheapest_kind_per_variant() {
         assert_eq!(kind("shuo", "shou"), Some(TypoKind::Transpose));
+    }
+
+    #[test]
+    fn retroflex_edit_only_covers_h_after_sibilant_initial() {
+        // 平舌声母后插 / 少一个 h（平翘舌）
+        assert!(is_retroflex_edit("si", "shi"));
+        assert!(is_retroflex_edit("shi", "si"));
+        assert!(is_retroflex_edit("ci", "chi"));
+        assert!(is_retroflex_edit("zi", "zhi"));
+        assert!(is_retroflex_edit("sen", "shen"));
+        assert!(is_retroflex_edit("seng", "sheng"));
+        assert!(is_retroflex_edit("cu", "chu"));
+        assert!(is_retroflex_edit("zai", "zhai"));
+        // 前后鼻音、跨声母、介音都不算平翘舌
+        assert!(!is_retroflex_edit("min", "ming"));
+        assert!(!is_retroflex_edit("gan", "gang"));
+        assert!(!is_retroflex_edit("si", "xi"));
+        assert!(!is_retroflex_edit("si", "sai"));
+        assert!(!is_retroflex_edit("zi", "za"));
     }
 
     #[test]

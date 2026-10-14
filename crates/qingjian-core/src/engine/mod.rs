@@ -66,7 +66,7 @@ use crate::composition::Composition;
 use crate::correction::{self, Correction, TypoCosts, typo};
 use crate::emoji::EmojiTable;
 use crate::english;
-use crate::fuzzy::{Expanded, FuzzyRules};
+use crate::fuzzy::{EdgeKind, Expanded, FuzzyRules};
 use crate::history::InputHistory;
 use crate::parser::{self, ParseError, Segmentation};
 use crate::punctuation::Punctuation;

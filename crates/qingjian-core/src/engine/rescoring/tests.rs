@@ -30,6 +30,7 @@ fn path(text: &str, score: f64) -> Conversion {
         score,
         static_score: score,
         penalty: 0.0,
+        strict_penalty: 0.0,
     }
 }
 

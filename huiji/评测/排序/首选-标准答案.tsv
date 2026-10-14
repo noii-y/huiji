@@ -86,3 +86,63 @@
 北京	beijing
 森林	senlin
 天津	tianjin
+# === F. 平翘舌（s/c/z 漏 h）：漏了声母后的 h 要补出翘舌，原样拼出的生僻组合不能卡住 ===
+我是	wosi
+吃饭	cifan
+知道	zidao
+# === G. 系统发音纠错 vs 原样词保护：发音模糊让高频词赢，随机手滑与精确输入必须守住 ===
+# 原样拼音能拼出词库词，但系统发音（尾 g / 声母 h）补出的才是高频常用词
+生活	shenhuo
+网上	wangshan
+生产	shenchan
+# 精确输入与随机手滑（相邻键误碰）不得被纠错带歪
+测试	ceshi
+技能	jineng
+四个	sige
+自己	ziji
+司机	siji
+公司	gongsi
+生活	shenghuo
+厉害	lihai
+你好	nihao
+# === H. 常用多字词发音纠错补偿（两阶段四条件）：漏 g/h 且纠正出的是常用多字词、词频碾压原样词时抬首选；原样词本身常用、单字、两处都改则守住 ===
+# 一处漏 g/h、纠正出常用多字词（城市/撑死 40 倍、老师/劳斯 114 倍）
+城市	chengsi
+老师	laosi
+同时	tongsi
+银行	yinhan
+阳光	yangguan
+朋友	penyou
+成功	chengong
+身体	shenti
+欣赏	xinshang
+发展	fazhan
+# 原样词本身就是常用词，纠错词只高两三倍不得顶（世纪 36261 不顶 司机 14613）；首尾两处都改不抬（晚上 不顶 网上）
+意思	yisi
+平安	pingan
+上班	shangban
+伙伴	huoban
+一般	yiban
+江南	jiangnan
+困难	kunnan
+交换	jiaohuan
+头晕	touyun
+什么	shenme
+人民	renmin
+灾难	zainan
+灿烂	canlan
+自然	ziran
+申请	shenqing
+思考	sikao
+名字	mingzi
+色彩	secai
+组成	zucheng
+拼音	pinyin
+曾经	cengjing
+所以	suoyi
+# 单字是最精确的输入单位，不参与补偿（让 高 52 倍不顶 然、上 高 5 倍不顶 山）
+然	ran
+山	shan
+四	si
+此	ci
+字	zi

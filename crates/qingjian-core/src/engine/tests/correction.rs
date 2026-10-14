@@ -361,3 +361,48 @@ fn fuzzy_rules_add_homophones_behind_exact_hits() {
     assert_eq!(all[0], "开发");
     assert_eq!(all.iter().filter(|t| *t == "开发").count(), 1);
 }
+
+/// 漏 g/h 的系统发音纠错，纠正出来是个常用多字词、且词频远超原样能拼出的词时，
+/// 把它抬到首选（城市/老师）；但原样词自己就是常用词时（司机 vs 世纪，只差 2.5 倍）不能顶；
+/// 首尾两处都改的（wangshan→晚上，要改 wang→wan 和 shan→shang 两处）也不抬，网上 才是一处漏 g。
+#[test]
+fn common_multiword_phonetic_compensation_has_guards() {
+    let dictionary = Dictionary::parse(
+        "城市\tcheng shi\t60000\n撑死\tcheng si\t1500\n\
+         老师\tlao shi\t80000\n劳斯\tlao si\t700\n\
+         司机\tsi ji\t14000\n世纪\tshi ji\t36000\n\
+         网上\twang shang\t17000\n晚上\twan shang\t125000\n望山\twang shan\t80\n\
+         成\tcheng\t200000\n城\tcheng\t40000\n程\tcheng\t60000\n市\tshi\t3000\n是\tshi\t3000000\n\
+         师\tshi\t38000\n世\tshi\t50000\n死\tsi\t90000\n四\tsi\t100000\n司\tsi\t10000\n\
+         老\tlao\t300000\n劳\tlao\t50000\n机\tji\t200000\n纪\tji\t20000\n\
+         网\twang\t30000\n望\twang\t10000\n晚\twan\t200000\n上\tshang\t500000\n山\tshan\t90000\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dictionary);
+    // 一处漏 h、纠正词词频碾压原样词：城市（40 倍）、老师（114 倍）
+    engine.set_input("chengsi");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "城市");
+    engine.set_input("laosi");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "老师");
+    // 原样 司机 也是常用词，世纪 只高 2.5 倍（不到 3 倍门槛），原样守住
+    engine.set_input("siji");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "司机");
+    // 网上 只改一处（shan→shang）；晚上 要改两处，哪怕词频更高也不抬
+    engine.set_input("wangshan");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "网上");
+}
+
+/// 单字是最精确的输入单位，不参与多字词补偿：哪怕纠正过来的字词频高几十倍，也不翻。
+/// ran 就该先给 然（让 rang 高 52 倍也不上），shan 就该先给 山（上 shang 高 5 倍也不上）。
+#[test]
+fn single_syllable_not_compensated() {
+    let dictionary = Dictionary::parse(
+        "然\tran\t5000\n让\trang\t260000\n山\tshan\t92957\n上\tshang\t533168\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dictionary);
+    engine.set_input("ran");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "然");
+    engine.set_input("shan");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "山");
+}

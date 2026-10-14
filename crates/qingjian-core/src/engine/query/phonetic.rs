@@ -1,5 +1,7 @@
 //! 拼音侧的候选生成：切分、拼写纠错、词级查找与排序，再补上整句、英文、快捷与 emoji 候选。
 
+use crate::correction::typo;
+
 use super::*;
 
 impl Engine {
@@ -96,8 +98,11 @@ impl Engine {
             let mut patterns = segmentation.patterns();
             let count = patterns.len();
             let last = &segmentation.syllables[count - 1];
-            // 最后一个音节即使打完了也可能还没打完（`xia` 可能是 `xiang` 的前缀），按前缀查；双拼两键就是定局
-            if last.complete && decoded.is_none() && parser::is_syllable_prefix(&last.text) {
+            // 最后一个音节即使打完了也可能还没打完（`xia` 可能是 `xiang` 的前缀），按前缀查；双拼两键就是定局。
+            // 记下来这是"完整音节恰好是前缀"：命中的更长音节词要按系统发音补音参与竞争，不能被"没打完"压死。
+            let complete_prefix =
+                last.complete && decoded.is_none() && parser::is_syllable_prefix(&last.text);
+            if complete_prefix {
                 patterns[count - 1].complete = false;
             }
             // 词级候选只按敲的原样与模糊音查，敲错变体只进整句词图（它的候选从那边插进来）：
@@ -109,15 +114,42 @@ impl Engine {
             let hits = self.lookup_all(&positions);
             scored.reserve(hits.len());
             for hit in hits {
-                let full_last = last.complete
+                let mut full_last = last.complete
                     && hit.syllables().nth(count - 1) == Some(patterns[count - 1].text);
+                let mut penalty = expanded.penalty(hit.syllables());
+                // 尾音节已敲完，只是它是更长音节的前缀；命中词尾音节若只差一个系统发音音素
+                // （漏尾 g：shan→shang、漏声母 h：si→shi），这是前后鼻音/平翘舌不分，不是没打完。
+                // 视作完整命中并计系统发音代价，让它与原样词按词频竞争：`wangshan` 网上词频是望山的上百倍，
+                // 不能因为"末音节完整"这条硬规则把它压死（那是为真没打完的 xia→xiang 设计的）。
+                // 只对多字词放开：单字是最精确的输入单位，敲 ran 就该先给"然"，不能让补 g 的"让"抢首。
+                if complete_prefix && count >= 2 {
+                    if let Some(hit_last) = hit.syllables().nth(count - 1) {
+                        if hit_last != last.text.as_str() {
+                            let phonetic = if typo::is_velar_nasal_edit(&last.text, hit_last) {
+                                Some(self.typo_costs.velar_nasal_cost(
+                                    self.learner.typo_count(&last.text, hit_last),
+                                ))
+                            } else if typo::is_retroflex_edit(&last.text, hit_last) {
+                                Some(self.typo_costs.retroflex_cost(
+                                    self.learner.typo_count(&last.text, hit_last),
+                                ))
+                            } else {
+                                None
+                            };
+                            if let Some(cost) = phonetic {
+                                full_last = true;
+                                penalty = penalty.max(cost);
+                            }
+                        }
+                    }
+                }
                 scored.push(Scored {
                     hit,
                     full_last,
                     coverage: segmentation.letters(),
                     abbreviated,
                     weight: self.learner.weight(hit.text),
-                    penalty: expanded.penalty(hit.syllables()),
+                    penalty,
                 });
             }
             // 输入的前缀也出候选（`kaifazhe` → 开发、开），否则长句没法逐词上屏。

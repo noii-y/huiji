@@ -93,9 +93,11 @@ impl Engine {
         if paths.is_empty() {
             return Vec::new();
         }
-        // 不按原样读的路径（敲错边 / 模糊音）不许压过「敲的拼音本身就是一个词」：`jineng` 按 `jin eng` 切时
-        // 词图里没有 技能，敲错边读出 近藤；`ceshi` 读出 的是。词级候选里有音节正好拼成整段输入的词时退回原样的路径
-        if paths[0].altered() {
+        // 「随机手滑」路径（相邻键误碰 / 换位 / 多漏键）不许压过「敲的拼音本身就是一个词」：`jineng` 按 `jin eng`
+        // 切时词图里没有 技能，敲错边读出 近藤；`ceshi` 读出 的是。词级候选里有音节正好拼成整段输入的词时退回原样。
+        // 但成系统的发音漏键（前后鼻音尾 g、平翘舌声母 h）不退回——`shenhuo` 原样能拼出 甚或，却该让 生活 靠词频赢，
+        // 否则发音模糊的纠错被一刀切。这类路径只含 Phonetic 边，strict_altered() 为 false。
+        if paths[0].strict_altered() {
             let letters = best.joined("");
             let spelled_exactly = items
                 .iter()
@@ -211,6 +213,7 @@ impl Engine {
             self.personal(),
             |text| self.learner.weight(text),
             |index, syllable| expanded.cost(index, syllable),
+            |index, syllable| expanded.strict_cost(index, syllable),
             &mut self.span_cache.borrow_mut(),
         );
         // 与最优路径差得太远的不参与：那种差距多半是个人 n-gram 拉开的

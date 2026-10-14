@@ -30,14 +30,17 @@ impl Engine {
             }
             for (text, kind) in typo::variants(pattern.text) {
                 let accepted = self.learner.typo_count(pattern.text, text);
-                let cost = if typo::is_velar_nasal_edit(pattern.text, &text) {
-                    // 保留声母、只多/少一个前后鼻音尾 g（min→ming）是系统性发音模糊，
-                    // 比跨声母换相邻键（min→jin）更可能，给单独的低代价。
-                    self.typo_costs.velar_nasal_cost(accepted)
+                // 系统发音漏键（前后鼻音尾 g、平翘舌声母 h）：保留声母、只动一个固定音素，
+                // 成系统而非随机手滑，给低代价且标成 Phonetic（不被原样词保护一刀切退回）；
+                // 其余编辑（相邻键误碰、换位、多漏键）是随机手滑，按物理误触处理。
+                let (cost, edge) = if typo::is_velar_nasal_edit(pattern.text, &text) {
+                    (self.typo_costs.velar_nasal_cost(accepted), EdgeKind::Phonetic)
+                } else if typo::is_retroflex_edit(pattern.text, &text) {
+                    (self.typo_costs.retroflex_cost(accepted), EdgeKind::Phonetic)
                 } else {
-                    self.typo_costs.typo_cost(*kind, accepted)
+                    (self.typo_costs.typo_cost(*kind, accepted), EdgeKind::Physical)
                 };
-                expanded.push_alternative(index, text, cost);
+                expanded.push_alternative(index, text, cost, edge);
             }
         }
         expanded

@@ -24,6 +24,11 @@ pub struct TypoCosts {
     /// 属于成系统的发音模糊，而不是随机手滑，代价比相邻键替换还低。
     pub velar_nasal: f64,
 
+    /// 平翘舌声母 h 的多/少（`si`→`shi`、`ci`→`chi`、`zi`→`zhi`）：只在平舌声母 s/c/z 后插/去一个 h，
+    /// 同样是成系统的发音模糊，不是随机手滑。si/shi 都是高频合法音节，定价比前后鼻音略保守，
+    /// 靠词频让「吃饭/知道/我是」能压过原样拼出的生僻组合，又不把「四个/自己/公司」带歪。
+    pub retroflex: f64,
+
     /// 个人敲错表最多给一条边减多少代价：减到只剩 1.0 左右，敲错的解释仍要比原样好一点才排上来。
     pub discount_cap: f64,
 
@@ -46,6 +51,8 @@ impl TypoCosts {
         // 前后鼻音是最常见的发音模糊之一：要比「跨声母换相邻键」（substitute 5.0）低，
         // 实测漏 g 的 `min` 得让 `ming` 拿到约 1.0 以上优势才能压过误碰出来的 `jin`（今天）。
         velar_nasal: 3.5,
+        // 平翘舌：先与前后鼻音同档，靠答案集回归；si/shi 都高频，必要时把这一档调得比 3.5 稍高。
+        retroflex: 3.5,
         discount_cap: 3.0,
         correction_penalty: 5.0,
         correction_transpose_discount: 1.0,
@@ -69,6 +76,11 @@ impl TypoCosts {
     /// 前后鼻音尾 g 多/少（`min`↔`ming`）这条边的代价，同样按个人敲错表打折。
     pub fn velar_nasal_cost(&self, accepted: u32) -> f64 {
         self.discounted(self.velar_nasal, accepted)
+    }
+
+    /// 平翘舌声母 h 多/少（`si`↔`shi`）这条边的代价，同样按个人敲错表打折。
+    pub fn retroflex_cost(&self, accepted: u32) -> f64 {
+        self.discounted(self.retroflex, accepted)
     }
 
     /// 整段一处编辑的纠错代价：相邻换位先减 [`Self::correction_transpose_discount`]，再按个人敲错表打折。

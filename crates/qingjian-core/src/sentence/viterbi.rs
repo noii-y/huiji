@@ -7,8 +7,10 @@ use qingjian_dictionary::{Dictionary, Match, SyllablePattern};
 
 use super::{
     ABBREVIATED_SPAN_CANDIDATES, BEAM_WIDTH, Context, Conversion, LanguageModel,
-    MAX_WORD_SYLLABLES, MIN_PARTIAL_LETTERS, Personal, SPAN_CANDIDATES, SentenceWord, SpanCache,
-    SpanWord, fallback_log_prob, transition_log_prob,
+    MAX_WORD_SYLLABLES, MIN_PARTIAL_LETTERS, Personal, PHONETIC_COMMON_FLOOR,
+    PHONETIC_COMMON_PENALTY, PHONETIC_COMMON_RATIO, SPAN_CANDIDATES, SentenceWord, SpanCache,
+    SpanWord,
+    fallback_log_prob, transition_log_prob,
 };
 use crate::ranking::weight_bonus;
 
@@ -45,6 +47,9 @@ struct Node {
 
     /// 到此为止路径上模糊音 / 敲错变体的代价之和（已从 `score` 里扣掉，另记一份给调用方判断路径是不是原样）。
     penalty: f64,
+
+    /// 到此为止路径上「随机手滑」边的代价之和（系统发音 / 模糊音不计）。
+    strict_penalty: f64,
 }
 
 /// 把音节序列转成最可能的词序列。`positions` 每个位置是若干写法（第一种是敲的，其余是模糊音 / 敲错变体），
@@ -61,6 +66,7 @@ pub fn convert(
     personal: Personal<'_>,
     weight: impl Fn(&str) -> u32,
     cost: impl Fn(usize, &str) -> f64,
+    strict_cost: impl Fn(usize, &str) -> f64,
     cache: &mut SpanCache,
 ) -> Option<Conversion> {
     convert_with(
@@ -71,6 +77,7 @@ pub fn convert(
         personal,
         weight,
         cost,
+        strict_cost,
         cache,
     )
 }
@@ -84,6 +91,7 @@ pub fn convert_whole(
     personal: Personal<'_>,
     weight: impl Fn(&str) -> u32,
     cost: impl Fn(usize, &str) -> f64,
+    strict_cost: impl Fn(usize, &str) -> f64,
     cache: &mut SpanCache,
 ) -> Option<Conversion> {
     convert_with(
@@ -94,6 +102,7 @@ pub fn convert_whole(
         personal,
         weight,
         cost,
+        strict_cost,
         cache,
     )
 }
@@ -108,6 +117,7 @@ pub fn convert_with(
     personal: Personal<'_>,
     weight: impl Fn(&str) -> u32,
     cost: impl Fn(usize, &str) -> f64,
+    strict_cost: impl Fn(usize, &str) -> f64,
     cache: &mut SpanCache,
 ) -> Option<Conversion> {
     convert_paths(
@@ -119,6 +129,7 @@ pub fn convert_with(
         personal,
         weight,
         cost,
+        strict_cost,
         cache,
     )
     .into_iter()
@@ -136,6 +147,7 @@ pub fn convert_paths(
     personal: Personal<'_>,
     weight: impl Fn(&str) -> u32,
     cost: impl Fn(usize, &str) -> f64,
+    strict_cost: impl Fn(usize, &str) -> f64,
     cache: &mut SpanCache,
 ) -> Vec<Conversion> {
     let Some((last, head)) = positions.split_last() else {
@@ -176,6 +188,7 @@ pub fn convert_paths(
         back: 0,
         placeholder: false,
         penalty: 0.0,
+        strict_penalty: 0.0,
     });
     for start in 0..n {
         prune(&mut nodes[start]);
@@ -186,7 +199,15 @@ pub fn convert_paths(
         for end in start + 1..=n.min(start + MAX_WORD_SYLLABLES) {
             let span = &positions[start..end];
             let hits = cache.get_or_insert_with(SpanCache::key(span), || {
-                span_candidates(dictionaries, span, start, personal, &weight, &cost)
+                span_candidates(
+                    dictionaries,
+                    span,
+                    start,
+                    personal,
+                    &weight,
+                    &cost,
+                    &strict_cost,
+                )
             });
             if hits.is_empty() {
                 continue;
@@ -199,6 +220,7 @@ pub fn convert_paths(
                     best_predecessor(&nodes, start, &hit.text, model, personal, fallback);
                 let previous = &nodes[start][back];
                 let penalty = previous.penalty + hit.penalty;
+                let strict_penalty = previous.strict_penalty + hit.strict_penalty;
                 let static_step = model
                     .log_prob((start > 0).then_some(previous.text.as_str()), &hit.text)
                     .unwrap_or(fallback);
@@ -214,6 +236,7 @@ pub fn convert_paths(
                     back,
                     placeholder: false,
                     penalty,
+                    strict_penalty,
                 });
             }
         }
@@ -229,6 +252,7 @@ pub fn convert_paths(
                 UNKNOWN_LOG_PROB,
             );
             let penalty = nodes[start][back].penalty;
+            let strict_penalty = nodes[start][back].strict_penalty;
             let static_score = nodes[start][back].static_score + UNKNOWN_LOG_PROB;
             nodes[start + 1].push(Node {
                 start,
@@ -239,6 +263,7 @@ pub fn convert_paths(
                 back,
                 placeholder: true,
                 penalty,
+                strict_penalty,
             });
         }
     }
@@ -261,6 +286,7 @@ fn backtrack(nodes: &[Vec<Node>], mut position: usize, mut index: usize) -> Conv
     let score = nodes[position][index].score;
     let static_score = nodes[position][index].static_score;
     let penalty = nodes[position][index].penalty;
+    let strict_penalty = nodes[position][index].strict_penalty;
     let mut words: Vec<SentenceWord> = Vec::new();
     while position > 0 {
         let node = &nodes[position][index];
@@ -286,6 +312,7 @@ fn backtrack(nodes: &[Vec<Node>], mut position: usize, mut index: usize) -> Conv
         score,
         static_score,
         penalty,
+        strict_penalty,
     }
 }
 
@@ -302,6 +329,7 @@ impl LanguageModel for NoModel {
 /// 个人次数只在这里保证用户常用的同音词进得了格子，不进路径打分（那是 n-gram 的事）；
 /// 打折让敲错变体命中的词只在原样命中不够多时才进格子，而常用词（关系）即使打折也留得住。
 /// 格子里有简拼位置时命中的是一大片不同读音的词，多留一些让语言模型去挑。
+#[allow(clippy::too_many_arguments)]
 fn span_candidates(
     dictionaries: &[&Dictionary],
     span: &[Vec<SyllablePattern<'_>>],
@@ -309,35 +337,93 @@ fn span_candidates(
     personal: Personal<'_>,
     weight: &impl Fn(&str) -> u32,
     cost: &impl Fn(usize, &str) -> f64,
+    strict_cost: &impl Fn(usize, &str) -> f64,
 ) -> Vec<SpanWord> {
     let alternatives = span.iter().any(|p| p.len() > 1);
-    let penalty_of = |m: &Match<'_>| {
+    let penalties_of = |m: &Match<'_>| -> (f64, f64) {
         if !alternatives {
-            return 0.0;
+            return (0.0, 0.0);
         }
         m.syllables()
             .enumerate()
-            .map(|(index, syllable)| cost(start + index, syllable))
-            .sum::<f64>()
+            .map(|(index, syllable)| {
+                let pos = start + index;
+                (cost(pos, syllable), strict_cost(pos, syllable))
+            })
+            .fold((0.0, 0.0), |(a, s), (c, sc)| (a + c, s + sc))
     };
-    // 得分先算好再排：单字母简拼的格子能命中几千条，比较器里每次查两张表会让排序占掉十几毫秒
-    let mut scored: Vec<(f64, f64, f64, bool, Match<'_>)> = dictionaries
+    // 先收集原始候选（不做补偿），同时记下这个词相对敲的音节有几个位置走了变体：
+    // 恰好 1 个位置不同才算「一处系统发音纠错」，wangshan→晚上（首尾两处都改）这种不补偿。
+    struct Raw<'a> {
+        freq: f64,
+        seen: f64,
+        emission: f64,
+        penalty: f64,
+        strict: f64,
+        diffs: usize,
+        rare: bool,
+        m: Match<'a>,
+    }
+    let raw: Vec<Raw<'_>> = dictionaries
         .iter()
         .flat_map(|d| d.lookup_exact_alt(span).into_iter().map(move |m| (d, m)))
         .map(|(d, m)| {
-            let seen = weight(m.text) + personal.count(m.text);
-            let penalty = penalty_of(&m);
-            let emission = d.reading_emission_log(m.text, m.frequency);
-            let rare = d.reading_is_rare(m.text, m.frequency);
-            let score = f64::from(m.frequency)
-                * (1.0 + f64::from(seen))
-                * (-penalty).exp()
-                * emission.exp();
-            (score, penalty, emission, rare, m)
+            let seen = f64::from(weight(m.text) + personal.count(m.text));
+            let (penalty, strict) = penalties_of(&m);
+            let diffs = m
+                .syllables()
+                .enumerate()
+                .filter(|(index, syl)| span.get(*index).is_some_and(|forms| forms[0].text != *syl))
+                .count();
+            Raw {
+                freq: f64::from(m.frequency),
+                seen,
+                emission: d.reading_emission_log(m.text, m.frequency),
+                penalty,
+                strict,
+                diffs,
+                rare: d.reading_is_rare(m.text, m.frequency),
+                m,
+            }
+        })
+        .collect();
+    // 敲的音节原样（一个位置都没改）能拼出的最高频词：它是「用户没打错时真正想说的话」的基准。
+    let original_top = raw
+        .iter()
+        .filter(|r| r.diffs == 0)
+        .map(|r| r.freq)
+        .fold(0.0_f64, f64::max);
+    // 系统发音纠错降代价的四个条件缺一不可：
+    // 1) 只有漏 g/h 的 Phonetic 边、没有随机手滑边（strict=0）；
+    // 2) 恰好改一处（两处都改如 晚上 不补偿）；
+    // 3) 纠正出来是常用多字词（freq 过门槛起码；单字不补，金+恩 这类单字硬凑也不补）；
+    // 4) 词频明显高过原样最高频词（PHONETIC_COMMON_RATIO 倍）——原样词自己就是常用词（司机 14613）
+    //    时，哪怕纠错词也常用（世纪 36261）也不顶，原样打对了就该尊重。
+    let finalize = |r: &Raw<'_>| -> (f64, f64) {
+        let mut penalty = r.penalty;
+        let syllables = r.m.syllables().count();
+        if r.strict == 0.0
+            && r.penalty > 0.0
+            && r.diffs == 1
+            && syllables >= 2
+            && r.freq >= f64::from(PHONETIC_COMMON_FLOOR)
+            && r.freq >= original_top * PHONETIC_COMMON_RATIO
+        {
+            penalty = penalty.min(PHONETIC_COMMON_PENALTY);
+        }
+        (penalty, r.strict)
+    };
+    // 得分先算好再排：单字母简拼的格子能命中几千条，比较器里每次查两张表会让排序占掉十几毫秒
+    let mut scored: Vec<(f64, f64, f64, f64, bool, Match<'_>)> = raw
+        .iter()
+        .map(|r| {
+            let (penalty, strict) = finalize(r);
+            let score = r.freq * (1.0 + r.seen) * (-penalty).exp() * r.emission.exp();
+            (score, penalty, strict, r.emission, r.rare, r.m)
         })
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    scored.dedup_by(|a, b| a.4.text == b.4.text);
+    scored.dedup_by(|a, b| a.5.text == b.5.text);
     let abbreviated = span.iter().any(|p| p.iter().any(|t| !t.complete));
     scored.truncate(if abbreviated {
         ABBREVIATED_SPAN_CANDIDATES
@@ -346,11 +432,12 @@ fn span_candidates(
     });
     scored
         .into_iter()
-        .map(|(_, penalty, emission, rare, hit)| SpanWord {
+        .map(|(_, penalty, strict_penalty, emission, rare, hit)| SpanWord {
             text: hit.text.to_owned(),
             syllables: hit.syllables().map(str::to_owned).collect(),
             frequency: hit.frequency,
             penalty,
+            strict_penalty,
             emission,
             rare,
         })
@@ -423,6 +510,7 @@ mod tests {
             Personal::NONE,
             |_| 0,
             |_, _| 0.0,
+            |_, _| 0.0,
             &mut SpanCache::default(),
         )
     }
@@ -452,6 +540,7 @@ mod tests {
                 Personal::NONE,
                 |t| if t == "卧" { count } else { 0 },
                 |_, _| 0.0,
+                |_, _| 0.0,
                 &mut SpanCache::default(),
             )
             .unwrap()
@@ -468,6 +557,7 @@ mod tests {
                 &NoLanguageModel,
                 Personal::NONE,
                 |t| if t == "区" { count } else { 0 },
+                |_, _| 0.0,
                 |_, _| 0.0,
                 &mut SpanCache::default(),
             )
@@ -532,6 +622,7 @@ mod tests {
             Personal::NONE,
             |_| 0,
             |_, _| 0.0,
+            |_, _| 0.0,
             &mut SpanCache::default(),
         )
         .unwrap();
@@ -573,6 +664,7 @@ mod tests {
             Personal::NONE,
             |_| 0,
             |_, _| 0.0,
+            |_, _| 0.0,
             &mut SpanCache::default(),
         )
         .unwrap();
@@ -592,6 +684,7 @@ mod tests {
                 &XiangModel,
                 Personal::new(Some(personal)),
                 |_| 0,
+                |_, _| 0.0,
                 |_, _| 0.0,
                 &mut SpanCache::default(),
             )
@@ -622,6 +715,7 @@ mod tests {
                 &NoLanguageModel,
                 Personal::new(Some(personal)),
                 |_| 0,
+                |_, _| 0.0,
                 |_, _| 0.0,
                 &mut SpanCache::default(),
             )
@@ -654,6 +748,7 @@ mod tests {
                 Personal::NONE,
                 |_| 0,
                 |_, _| 0.0,
+                |_, _| 0.0,
                 cache,
             )
             .unwrap()
@@ -680,7 +775,15 @@ mod tests {
             "关系\tguan xi\t500000\n干\tgan\t20000\n洗\txi\t10000\n感谢\tgan xie\t300000\n关\tguan\t30000\n谢\txie\t5000\n",
         )
         .unwrap();
+        // gan→guan 是漏键（随机手滑），cost 与 strict_cost 都记这笔代价
         let cost = |index: usize, syllable: &str| {
+            if index == 0 && syllable == "guan" {
+                4.5
+            } else {
+                0.0
+            }
+        };
+        let strict_cost = |index: usize, syllable: &str| {
             if index == 0 && syllable == "guan" {
                 4.5
             } else {
@@ -695,6 +798,7 @@ mod tests {
                 Personal::NONE,
                 |_| 0,
                 cost,
+                strict_cost,
                 &mut SpanCache::default(),
             )
             .unwrap()
@@ -713,8 +817,10 @@ mod tests {
         assert_eq!(conversion.words[0].syllables, ["guan", "xi"]);
         // 原样 干洗 两个单字的得分远低于 关系 − 4.5：噪声信道选纠正，路径带着代价
         assert_eq!(conversion.penalty, 4.5);
+        assert_eq!(conversion.strict_penalty, 4.5); // 漏键属于随机手滑
         let conversion = run(with_typo("xie"));
         assert_eq!(conversion.text, "感谢");
         assert_eq!(conversion.penalty, 0.0);
+        assert_eq!(conversion.strict_penalty, 0.0);
     }
 }

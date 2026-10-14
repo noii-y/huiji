@@ -7,5 +7,5 @@
 mod expanded;
 mod rules;
 
-pub use expanded::Expanded;
+pub use expanded::{EdgeKind, Expanded};
 pub use rules::FuzzyRules;
