@@ -21,7 +21,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         ),
         field(
             "数据目录",
-            "",
+            "词频、个人词库、输入习惯和设置都在这；升级、覆盖安装不会删除，换电脑时把整个文件夹复制到新机同一位置即可带走。",
             Button::new()
                 .on_click(context.message(Message::OpenDataDir))
                 .content("打开数据目录"),
