@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/noii-y/huiji/raw/main/huiji/assets/huiji-banner.png" alt="灰迹 Huiji" width="100%">
+  <img src="https://cdn.jsdelivr.net/gh/noii-y/huiji@e92e984e46fd0e39b1653cbfc2a7d1a3948bee10/huiji/assets/huiji-banner.webp" alt="灰迹 Huiji" width="100%">
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 ## 边打字，边学外语
 
 <p align="center">
-  <img src="https://github.com/noii-y/huiji/raw/main/huiji/assets/huiji-candidates.png" alt="灰迹候选窗" width="380">
+  <img src="https://cdn.jsdelivr.net/gh/noii-y/huiji@e92e984e46fd0e39b1653cbfc2a7d1a3948bee10/huiji/assets/huiji-candidates.png" alt="灰迹候选窗" width="380">
 </p>
 
 - **词旁边就是外文。** 选词时顺带扫一眼：这个词英文怎么拼、是动词还是名词。一天敲下几千字，就反复见了这些词几遍，比正襟危坐背单词轻松，也更容易坚持。这套「词旁译词」是青简的标志性功能，灰迹原样保留。
@@ -81,6 +81,8 @@
 ## 数据与隐私
 
 拼音转换、词库、翻译、学习都在本机完成，不需要账号。云联想默认关闭，只有你自己填入 key 之后才发请求，请求直接发给服务商、不经过灰迹。个人学习数据留在本机，文件管理器等场景默认不记录。
+
+词频、个人词库、输入习惯和设置都放在数据目录 `%APPDATA%\Qingjian`，在设置「高级」页可以一键打开。覆盖安装、升级都不会动它；换电脑时把这个文件夹复制到新机的同一位置，打字习惯和设置就能接着用。
 
 ## 当前状态与路线图
 
