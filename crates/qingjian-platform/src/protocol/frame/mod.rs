@@ -51,6 +51,10 @@ pub struct Frame {
     /// 中文整句纠错或补全（云端）：画在拼音行下方，按 Tab 上屏。无则 `None`。
     pub sentence: Option<String>,
 
+    /// 云整句是否已被 Tab 选为首位：true 时它高亮成首位候选、再按空格 / 回车上屏，顶部外文同步成它的译文。
+    #[serde(default)]
+    pub sentence_selected: bool,
+
     /// 组句中文的外文译文（本地翻译模型）：画在拼音行右侧，只展示、不上屏。无则 `None`。
     #[serde(default)]
     pub translation: Option<String>,

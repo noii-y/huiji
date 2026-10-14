@@ -69,7 +69,14 @@ pub struct Router {
     /// 中文整句纠错（云端，拼音行下方、Tab 上屏）；缓冲变化时清空。
     sentence: Option<String>,
 
-    /// 组句中文的外文译文（端侧翻译，拼音行右侧、只展示不上屏）；缓冲变化时清空。
+    /// 云整句配套的外文译文（云端随整句一起返回）；与 [`Self::sentence`] 绑定，选中云整句后显示在拼音行右侧。
+    sentence_translation: Option<String>,
+
+    /// 云整句是否已被 Tab 选为首位：true 时它取代本地首选成为待上屏内容，顶部外文同步成云译文，
+    /// 再按空格 / 回车上屏；缓冲变化、Esc、翻页选词会取消。
+    cloud_selected: bool,
+
+    /// 组句中文的外文译文（端侧翻译，拼音行右侧、只展示不上屏）；跟随本地首位候选，缓冲变化时清空。
     compose_translation: Option<String>,
 
     /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
@@ -137,6 +144,8 @@ impl Router {
             pending_selection: None,
             selection_seq: 0,
             sentence: None,
+            sentence_translation: None,
+            cloud_selected: false,
             compose_translation: None,
             notice: None,
             highlight: 0,

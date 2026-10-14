@@ -8,12 +8,13 @@ pub const SYSTEM_PROMPT: &str = "\
 你是一个拼音输入法的云端联想引擎。用户正在打拼音，还没选词。你会收到一段 JSON：\
 letters（用户实际敲的字母，**可能有错字、漏字、多字、音节切错**）、pinyin（输入法按 letters 做的切分，' 分隔音节，单个字母是声母缩写，切分可能是错的）、\
 syllables（切分出的音节数，仅供参考）、before / after（当前光标前后的文本，应用给不出时为空）、\
-local_sentence（本地整句转换的结果，可能错）、local_candidates（本地词库排在前面的候选，第一个是本地首选）、max_items、want_sentence。
+local_sentence（本地整句转换的结果，可能错）、local_candidates（本地词库排在前面的候选，第一个是本地首选）、max_items、want_sentence、\
+target_language（用户正在学的外语代码：en 英语、ja 日语、es 西班牙语；为 zh 或空时一律按英语 en）。
 
 **local_candidates 和 local_sentence 只是本地的猜测，可能全错。**它们的用途是告诉你本地已经能给什么：\
 和它们重复的词会被丢掉，所以不要照抄；也不要被它们带偏——请只根据 letters 与 before / after 独立判断用户想打什么。
 
-输出 JSON：{\"words\": [{\"text\": \"…\", \"pinyin\": \"…\"}], \"sentence\": \"…\" 或 null}
+输出 JSON：{\"words\": [{\"text\": \"…\", \"pinyin\": \"…\"}], \"sentence\": \"…\" 或 null, \"translation\": \"…\" 或 null}
 
 words：用户最可能想输入、而本地又给不出（或排错了）的词或短语，0 到 max_items 个，按可能性排序。要求：
 - 按 letters 推断用户想打什么，允许纠正错字、漏字、多字（如 zhgdoima → 这个东西吗）；pinyin 给该词**正确**的全拼，音节间用空格，字数等于音节数，\
@@ -27,6 +28,8 @@ sentence：want_sentence 为 true 时，把 letters **还原成用户本来想�
 - 结果要和 letters 的拼音对应，**只纠错、不扩写**：用户没敲的意思不要自行补成更长的句子，不要接下文，也不要加任何评论、调侃或语气反应（例如不要出现「我才不学呢」「很高兴认识你」这类用户没打的内容）；
 - 例：shenmegouspiwanyi → 什么狗屁玩意；zhgdoima → 这个东西吗；nihao → 你好。它只替换这段拼音，**不要把 before 的内容抄进来**；
 - 不能有把握地还原成完整一句，就给 null。want_sentence 为 false 时给 null。语言跟随上下文。
+
+translation：sentence 非空时，把这句最终中文自然、地道地译成 target_language（面向工作场景，用母语者日常的说法，不要逐字硬译），只给译文、不加解释；sentence 为 null 时 translation 也必须为 null。
 
 不解释、不加引号、不加序号。";
 
@@ -83,6 +86,9 @@ struct UserMessage<'a> {
     max_items: usize,
 
     want_sentence: bool,
+
+    /// 整句要学的外语代码（en/ja/es），组句时随整句一起返回译文。
+    target_language: &'a str,
 }
 
 /// 问字模式发给模型的用户消息。
@@ -132,6 +138,7 @@ pub fn user_prompt(request: &PredictionRequest) -> String {
         local_candidates: &request.candidates,
         max_items: request.max_items,
         want_sentence: request.want_sentence,
+        target_language: &request.target_language,
     })
     .unwrap_or_default()
 }
@@ -144,6 +151,9 @@ pub struct Reply {
 
     /// 整句补全。
     pub sentence: Option<String>,
+
+    /// 整句补全对应的外文译文（与 sentence 同一次请求给出），只在 sentence 非空时存在。
+    pub translation: Option<String>,
 }
 
 impl Reply {
@@ -160,6 +170,9 @@ struct RawReply {
     words: Vec<RawWord>,
 
     sentence: Option<String>,
+
+    /// 整句中文对应的外文译文（组句时随整句一起返回）。
+    translation: Option<String>,
 
     /// 问字模式的答案。
     answers: Vec<RawWord>,
@@ -190,6 +203,7 @@ pub fn parse_reply(content: &str, request: &PredictionRequest) -> Reply {
                 .sentence
                 .map(|s| s.trim().to_owned())
                 .filter(|s| !s.is_empty()),
+            translation: None,
         };
     }
     let mut reply = Reply::default();
@@ -228,6 +242,12 @@ pub fn parse_reply(content: &str, request: &PredictionRequest) -> Reply {
             .map(|s| strip_before(&clean(&s), &request.before))
             .filter(|s| !s.is_empty() && Some(s.as_str()) != first_local)
             .filter(|s| request.syllables == 0 || s.chars().count() <= max_chars);
+        // 外文译文与整句绑定：整句不成立（None）时译文一律丢弃，避免译文对不上上屏内容。
+        reply.translation = raw
+            .translation
+            .zip(reply.sentence.as_ref())
+            .map(|(t, _)| clean(&t))
+            .filter(|t| !t.is_empty());
     }
     reply
 }
@@ -346,6 +366,26 @@ mod tests {
                 .as_deref(),
             Some("账套")
         );
+    }
+
+    #[test]
+    fn compose_translation_is_kept_with_sentence_and_dropped_without() {
+        // 整句成立：外文译文随整句一起保留。
+        let with = r#"{"words": [], "sentence": "账套", "translation": "ledger account"}"#;
+        let reply = parse_reply(with, &request("zhang'tao", true));
+        assert_eq!(reply.sentence.as_deref(), Some("账套"));
+        assert_eq!(reply.translation.as_deref(), Some("ledger account"));
+
+        // 整句为 null：即使模型给了译文也丢弃，避免译文对不上上屏内容。
+        let without = r#"{"words": [], "sentence": null, "translation": "should be dropped"}"#;
+        let reply = parse_reply(without, &request("zhang'tao", true));
+        assert_eq!(reply.sentence, None);
+        assert_eq!(reply.translation, None);
+
+        // 没要整句（want_sentence=false）：译文也不收。
+        let reply = parse_reply(with, &request("zhang'tao", false));
+        assert_eq!(reply.sentence, None);
+        assert_eq!(reply.translation, None);
     }
 
     #[test]

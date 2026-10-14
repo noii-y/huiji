@@ -113,8 +113,12 @@ fn shift_tab_precedes_prediction_and_english_commit() {
     );
     assert_eq!(result.1, None);
     assert_eq!(router.sentence.as_deref(), Some("可控补全"));
+    // 普通 Tab 第一次只把云整句选为首位、不上屏；空格才上屏。
+    let selected = key(&mut router, 9, None, normal);
+    assert_eq!(selected.1, None);
+    assert!(selected.2.sentence_selected);
     assert_eq!(
-        key(&mut router, 9, None, normal).1.as_deref(),
+        key(&mut router, 0x20, Some(' '), normal).1.as_deref(),
         Some("可控补全")
     );
     let english = KeyModifiers {
@@ -147,4 +151,94 @@ fn tab_with_raw_input_and_no_candidates_is_consumed_without_commit() {
     assert_eq!(result.0, KeyOutcome::Consumed);
     assert_eq!(result.1, None);
     assert_eq!(result.2.page, 0);
+}
+
+#[test]
+fn tab_selects_cloud_sentence_keeps_selection_and_space_commits() {
+    let mut router = router(5);
+    let normal = KeyModifiers::default();
+    compose(&mut router, "qq", normal);
+    router.sentence = Some("可控补全".into());
+    router.sentence_translation = Some("controllable completion".into());
+
+    // 第一次 Tab：云整句选为首位，不上屏，顶部外文同步成云译文。
+    let first = key(&mut router, 9, None, normal);
+    assert_eq!(first.1, None);
+    assert!(first.2.sentence_selected);
+    assert_eq!(first.2.translation.as_deref(), Some("controllable completion"));
+    // 选中后本地候选行不高亮。
+    assert_eq!(first.2.highlight, usize::MAX);
+
+    // 再按 Tab：保持原位、不翻页、不上屏。
+    let second = key(&mut router, 9, None, normal);
+    assert_eq!(second.1, None);
+    assert!(second.2.sentence_selected);
+    assert_eq!(second.2.page, 0);
+
+    // 空格上云整句。
+    assert_eq!(
+        key(&mut router, 0x20, Some(' '), normal).1.as_deref(),
+        Some("可控补全")
+    );
+}
+
+#[test]
+fn enter_commits_cloud_sentence_when_selected_but_raw_when_not() {
+    let mut router = router(5);
+    let normal = KeyModifiers::default();
+    compose(&mut router, "qq", normal);
+    router.sentence = Some("可控补全".into());
+
+    // 选中后回车上云整句。
+    key(&mut router, 9, None, normal);
+    assert_eq!(
+        key(&mut router, 0x0D, None, normal).1.as_deref(),
+        Some("可控补全")
+    );
+
+    // 未选中时回车仍是原始字母（微软拼音习惯）。
+    compose(&mut router, "qq", normal);
+    router.sentence = Some("可控补全".into());
+    assert_eq!(key(&mut router, 0x0D, None, normal).1.as_deref(), Some("qq"));
+}
+
+#[test]
+fn esc_cancels_cloud_selection_but_keeps_pinyin() {
+    let mut router = router(5);
+    let normal = KeyModifiers::default();
+    compose(&mut router, "qq", normal);
+    router.sentence = Some("可控补全".into());
+    key(&mut router, 9, None, normal);
+
+    // Esc 只取消选中：云整句回到待选状态，拼音 / 候选还在。
+    let frame = key(&mut router, 0x1B, None, normal).2;
+    assert!(!frame.sentence_selected);
+    assert_eq!(frame.sentence.as_deref(), Some("可控补全"));
+    assert!(!frame.candidates.items.is_empty());
+}
+
+#[test]
+fn browsing_candidates_cancels_cloud_selection() {
+    let mut router = router(5);
+    let normal = KeyModifiers::default();
+    compose(&mut router, "qq", normal);
+    router.sentence = Some("可控补全".into());
+    key(&mut router, 9, None, normal);
+
+    // 方向下移动高亮：云整句退出首位，回到本地候选浏览。
+    let frame = key(&mut router, 0x28, None, normal).2;
+    assert!(!frame.sentence_selected);
+    assert_eq!(frame.sentence.as_deref(), Some("可控补全"));
+}
+
+#[test]
+fn tab_still_pages_without_cloud_sentence() {
+    let mut router = router(1);
+    let normal = KeyModifiers::default();
+    compose(&mut router, "qq", normal);
+    assert!(router.sentence.is_none());
+    let result = key(&mut router, 9, None, normal);
+    assert_eq!(result.0, KeyOutcome::Consumed);
+    assert_eq!(result.2.page, 1);
+    assert!(!result.2.sentence_selected);
 }

@@ -143,7 +143,9 @@ impl Host {
                 Vec::new()
             },
             footer,
+            translation: None,
             sentence: self.sentence.clone(),
+            sentence_selected: false,
             status: self.status.clone(),
         };
         self.window.show(frame, self.anchor);

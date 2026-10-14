@@ -161,7 +161,13 @@ impl Engine {
             },
             want_sentence: policy.sentence && !question,
             text: String::new(),
-            target_language: String::new(),
+            // 组句时让云端顺手给整句外文：目标是学习语言；没接释义表（学习语言为中文）时退到英语。
+            target_language: match self.translator.language() {
+                crate::Language::Chinese => crate::Language::English,
+                other => other,
+            }
+            .code()
+            .to_owned(),
         };
         self.last_prediction_kind = kind;
         self.last_prediction_scope = scope.to_owned();

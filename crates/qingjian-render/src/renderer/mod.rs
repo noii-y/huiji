@@ -162,7 +162,7 @@ impl Renderer {
         );
         let mut y = margin + metrics.padding();
         y += self.draw_top_line(&mut canvas, frame, &metrics, margin, y);
-        y += self.draw_cloud_line(&mut canvas, frame, &metrics, margin, y);
+        y += self.draw_cloud_line(&mut canvas, frame, &metrics, margin, y, content_width);
         match layout {
             Layout::Vertical => {
                 self.draw_vertical(&mut canvas, frame, &metrics, margin, y, content_width);

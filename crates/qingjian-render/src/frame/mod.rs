@@ -34,8 +34,11 @@ pub struct Frame {
     /// 拼音行右侧的一句临时状态（删了什么词）：有它时不画译文。
     pub status: Option<String>,
 
-    /// 拼音行下方的中文整句纠错（云联想）：带云朵，按 Tab 上屏。
+    /// 拼音行下方的中文整句纠错（云联想）：带云朵，按 Tab 选中。
     pub sentence: Option<String>,
+
+    /// 云整句是否已被 Tab 选为首位：选中后这一行高亮成首位候选，再按空格 / 回车上屏。
+    pub sentence_selected: bool,
 }
 
 impl Frame {

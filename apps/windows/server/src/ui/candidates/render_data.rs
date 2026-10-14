@@ -32,8 +32,11 @@ pub(crate) struct RenderData {
     /// 外文译文，画在拼音行右侧（只展示）。
     pub(super) translation: Option<String>,
 
-    /// 中文整句纠错，画在拼音行下方（Tab 上屏）。
+    /// 中文整句纠错，画在拼音行下方（Tab 选中）。
     pub(super) sentence: Option<String>,
+
+    /// 云整句是否已被 Tab 选为首位（选中后高亮成首位候选）。
+    pub(super) sentence_selected: bool,
 
     /// 屏幕提示（删候选后的「已删除…」），画在拼音行下方。
     pub(super) notice: Option<String>,
@@ -59,6 +62,7 @@ impl RenderData {
             footer: None,
             translation: None,
             sentence: None,
+            sentence_selected: false,
             notice: None,
             layout: LayoutMode::default(),
             theme_mode: ThemeMode::default(),
@@ -83,6 +87,7 @@ impl RenderData {
         self.footer =
             (frame.page_count > 1).then(|| format!("{}/{}", frame.page + 1, frame.page_count));
         self.sentence = frame.sentence.clone();
+        self.sentence_selected = frame.sentence_selected;
         self.translation = frame.translation.clone();
         self.notice = frame.notice.clone();
     }
@@ -115,6 +120,7 @@ impl RenderData {
             footer: self.footer.clone(),
             translation: self.translation.clone(),
             sentence: self.sentence.clone(),
+            sentence_selected: self.sentence_selected,
             status: self.notice.clone(),
         }
     }

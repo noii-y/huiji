@@ -245,6 +245,7 @@ fn matrix() -> Frame {
             .collect(),
         footer: Some("2/12".into()),
         sentence: None,
+        sentence_selected: false,
         translation: None,
         status: None,
     }
@@ -301,6 +302,7 @@ fn nihao() -> Frame {
         column_ems: Vec::new(),
         footer: Some("1/6".to_owned()),
         sentence: None,
+        sentence_selected: false,
         translation: None,
         status: None,
     }
@@ -374,6 +376,7 @@ fn corrected_japanese() -> Frame {
         column_ems: Vec::new(),
         footer: None,
         sentence: None,
+        sentence_selected: false,
         translation: None,
         status: Some("已删除「开放」".to_owned()),
     }
@@ -389,6 +392,7 @@ fn probe() -> Frame {
         column_ems: Vec::new(),
         footer: None,
         sentence: None,
+        sentence_selected: false,
         translation: None,
         status: None,
     }

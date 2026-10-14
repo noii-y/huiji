@@ -140,6 +140,7 @@ impl Router {
                 theme: self.config.theme,
                 aux_code_show: false,
                 sentence: None,
+                sentence_selected: false,
                 translation: None,
                 notice: self.notice.clone(),
             },
@@ -180,6 +181,7 @@ impl Router {
                     theme: self.config.theme,
                     aux_code_show: false,
                     sentence: self.sentence.clone(),
+                    sentence_selected: false,
                     translation: None,
                     notice: self.notice.clone(),
                 }

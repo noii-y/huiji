@@ -14,6 +14,8 @@ impl Router {
         self.highlight = 0;
         self.navigated = false;
         self.sentence = None;
+        self.sentence_translation = None;
+        self.cloud_selected = false;
         self.compose_translation = None;
         if self.engine.composition().is_empty() {
             self.composed = None;
@@ -86,9 +88,12 @@ impl Router {
                 layout.set_cloud(words);
             }
             if prediction.sentence.is_some() {
+                // 云端整句：中文和外文同一次返回，绑定在一起。未选中时它只在云行待选，外文不顶上来；
+                // 等用户按 Tab 选中（见 input.rs），顶部外文才切到这句。
                 self.sentence = prediction.sentence;
-            }
-            if prediction.translation.is_some() {
+                self.sentence_translation = prediction.translation;
+            } else if prediction.translation.is_some() {
+                // 端侧整句译文只对应本地组出的中文，跟随本地首位候选。
                 self.compose_translation = prediction.translation;
             }
         }
@@ -100,8 +105,26 @@ impl Router {
         }
     }
 
+    /// Tab 把云整句选为首位：有云整句且尚未选中时置为选中态。返回 true 表示这次 Tab 被云整句吃掉
+    /// （不翻页）；已选中时再按 Tab 保持原位（同样吃掉、不翻走）；没有云整句返回 false，调用方按翻页处理。
+    pub(super) fn select_cloud_sentence(&mut self) -> bool {
+        if self.sentence.is_some() {
+            self.cloud_selected = true;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// 云整句是否在首位。
+    pub(super) fn cloud_selected(&self) -> bool {
+        self.cloud_selected
+    }
+
     /// 高亮移动 `delta`，夹在 `[0, 末尾]`，到页边自然换页。
     pub(super) fn move_highlight(&mut self, delta: isize) {
+        // 一旦手动浏览本地候选，云整句退出首位。
+        self.cloud_selected = false;
         let count = self.candidate_count();
         if count == 0 {
             self.highlight = 0;
@@ -114,6 +137,8 @@ impl Router {
 
     /// 整页翻 `step`，高亮落到目标页第一个候选。
     pub(super) fn page(&mut self, step: isize) {
+        // 加减号翻页 = 回去浏览本地候选，云整句退出首位。
+        self.cloud_selected = false;
         let count = self.candidate_count();
         if count == 0 {
             self.highlight = 0;
@@ -146,6 +171,8 @@ impl Router {
     }
 
     pub(super) fn commit_index(&mut self, index: usize) -> Option<String> {
+        // 数字选本地词：云整句退出首位。
+        self.cloud_selected = false;
         let candidate = self.layout_candidate(index)?;
         Some(self.engine.commit(&candidate))
     }
@@ -223,6 +250,7 @@ impl Router {
                 theme: self.config.theme,
                 aux_code_show: self.config.aux_code_show,
                 sentence: None,
+                sentence_selected: false,
                 translation: None,
                 notice: self.notice.clone(),
             },
@@ -233,7 +261,12 @@ impl Router {
                 ..
             }) => {
                 let page_size = self.config.page_size;
-                let highlight = self.highlight.min(layout.len().saturating_sub(1));
+                // 云整句被 Tab 选中后它就是首位，候选区回到第 0 页、且本地候选行不高亮。
+                let highlight = if self.cloud_selected {
+                    0
+                } else {
+                    self.highlight.min(layout.len().saturating_sub(1))
+                };
                 let page = highlight / page_size;
                 let items: Vec<Candidate> = layout
                     .page(page)
@@ -242,23 +275,51 @@ impl Router {
                     .collect();
                 let mut candidates = CandidateList { items };
                 self.engine.annotate(&mut candidates);
+                let page_highlight = highlight - page * page_size;
+                let frame_highlight = if self.cloud_selected {
+                    usize::MAX
+                } else {
+                    page_highlight
+                };
+                let translation = self.top_translation(&candidates.items, page_highlight);
                 Frame {
                     preedit: preedit.clone(),
                     preedit_mode: self.config.preedit,
                     cursor: *cursor,
                     candidates,
-                    highlight: highlight - page * page_size,
+                    highlight: frame_highlight,
                     page,
                     page_count: layout.pages().max(1),
                     layout: self.config.layout,
                     theme: self.config.theme,
                     aux_code_show: self.config.aux_code_show,
                     sentence: self.sentence.clone(),
-                    translation: self.compose_translation.clone(),
+                    sentence_selected: self.cloud_selected,
+                    translation,
                     notice: self.notice.clone(),
                 }
             }
         }
+    }
+
+    /// 顶部外文跟随当前首位候选：选中云整句时用云译文（没给就退回本地整句译文）；
+    /// 未选中时，高亮落在整句候选上用本地整句译文，落在单词候选上用该词的释义。
+    fn top_translation(&self, page_items: &[Candidate], page_highlight: usize) -> Option<String> {
+        if self.cloud_selected {
+            return self
+                .sentence_translation
+                .clone()
+                .or_else(|| self.compose_translation.clone());
+        }
+        let top = page_items.get(page_highlight)?;
+        if top.kind == qingjian_core::CandidateKind::Sentence
+            || top.kind == qingjian_core::CandidateKind::Generated
+        {
+            return self.compose_translation.clone();
+        }
+        let translation = top.translation.as_ref()?;
+        let senses: Vec<String> = translation.senses().iter().map(|s| s.text.clone()).collect();
+        (!senses.is_empty()).then(|| senses.join("；"))
     }
 }
 

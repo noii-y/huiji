@@ -107,7 +107,7 @@ impl Worker {
             sequence,
             words: reply.words,
             sentence: reply.sentence,
-            translation: None,
+            translation: reply.translation,
         });
     }
 }

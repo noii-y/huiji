@@ -117,13 +117,19 @@ impl Router {
                 Effect::Changed(None)
             }
             codes::ESCAPE => {
-                // 辅码态里 Esc 只清码段、拼音留着（与 Core 的 clear_aux 语义一致）
-                if self.engine.in_aux() {
+                // 云整句在首位时 Esc 只取消选中：拼音、候选和云整句都留着，且不触发 recompose
+                // （否则会把刚到的云整句一起清掉）；再按一次 Esc 才走清辅码 / 清缓冲。
+                if self.cloud_selected() {
+                    self.cloud_selected = false;
+                    Effect::Navigated
+                } else if self.engine.in_aux() {
+                    // 辅码态里 Esc 只清码段、拼音留着（与 Core 的 clear_aux 语义一致）
                     self.engine.clear_aux();
+                    Effect::Changed(None)
                 } else {
                     self.engine.clear();
+                    Effect::Changed(None)
                 }
-                Effect::Changed(None)
             }
             codes::RETURN => {
                 if self.engine.is_zhuyin_mode() {
@@ -132,6 +138,9 @@ impl Router {
                     } else {
                         Effect::Changed(Some(self.commit_highlighted()))
                     }
+                } else if self.cloud_selected() {
+                    // 云整句在首位时回车上的是云整句，而不是原始拼音；未选中时回车仍是原始字母。
+                    Effect::Changed(Some(self.commit_highlighted()))
                 } else {
                     Effect::Changed(Some(self.engine.take_raw()))
                 }
@@ -143,14 +152,14 @@ impl Router {
             codes::TAB if self.engine.english_mode() => {
                 Effect::Changed(Some(self.commit_highlighted()))
             }
-            // 中文模式 Tab：有云端中文整句纠错就接受上屏，没有就翻页。外文译文只展示、不影响 Tab。
-            codes::TAB => match self.sentence.take() {
-                Some(sentence) => Effect::Changed(Some(self.engine.accept_prediction(&sentence))),
-                None => {
+            // 中文模式 Tab：云整句第一次按 Tab 选为首位（不立即上屏，顶部外文同步切到它）；
+            // 已在首位再按 Tab 保持原位、不翻走；只有在没有云整句时 Tab 才翻页。
+            codes::TAB => {
+                if !self.cloud_selected() && !self.select_cloud_sentence() {
                     self.page(1);
-                    Effect::Navigated
                 }
-            },
+                Effect::Navigated
+            }
             codes::DOWN => {
                 self.move_highlight(1);
                 Effect::Navigated
@@ -348,8 +357,15 @@ impl Router {
         (digit <= page_size && index < self.candidate_count()).then_some(index)
     }
 
-    /// 上屏高亮候选；没有候选时缓冲原样上屏。
+    /// 上屏高亮候选；云整句在首位时上云整句；没有候选时缓冲原样上屏。
     fn commit_highlighted(&mut self) -> String {
+        if self.cloud_selected()
+            && let Some(sentence) = self.sentence.take()
+        {
+            self.cloud_selected = false;
+            self.sentence_translation = None;
+            return self.engine.accept_prediction(&sentence);
+        }
         match self.commit_index(self.highlight) {
             Some(text) => text,
             None => self.engine.take_raw(),
