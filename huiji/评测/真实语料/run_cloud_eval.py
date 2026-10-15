@@ -11,7 +11,7 @@ RES = os.path.join(BASE, 'results')
 PER_KIND = 17          # 每类抽样句数，六类约 100 句
 SEED = 42
 BASE_URL = 'https://api.deepseek.com'
-MODEL = 'deepseek-v4-flash'
+MODEL = 'deepseek-flash'
 
 def load_key():
     """优先环境变量；否则从本机 config.toml 解析，避免命令行里出现密钥。"""

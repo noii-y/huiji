@@ -350,6 +350,14 @@ pub const EXPLICIT_TRANSITION_WEIGHT: u32 = 2;
 /// 拼音短于这个字母数不联想：一两个字母的意图太模糊，白花一次请求。
 const MIN_PREDICTION_LETTERS: usize = 2;
 
+/// 少于这个音节数不发云端联想：1-2 音节是高频短词，本地首选已经足够可靠（真实语料评测，
+/// 云端在这个长度几乎没有净救回），请求只是白花 token。
+const MIN_CLOUD_SYLLABLES: usize = 3;
+
+/// 达到这个音节数才让云端给整句补全：3 个音节是词/短语，整句没有额外价值，只问云端词；
+/// 4 个音节以上本地组句开始明显出错，整句纠错的收益才上来（真实语料里云救回集中在 4 字以上）。
+const MIN_CLOUD_SENTENCE_SYLLABLES: usize = 4;
+
 /// 辅码触发键的缺省值（`[general] aux_code_key`）。
 pub const DEFAULT_AUX_CODE_KEY: char = ';';
 

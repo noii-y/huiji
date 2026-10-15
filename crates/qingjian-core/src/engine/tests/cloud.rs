@@ -98,7 +98,8 @@ fn prediction_request_trims_context_and_only_fires_while_composing() {
         replies: Vec::new(),
         sentence: true,
     }));
-    engine.set_input("kaifa");
+    // 4 个音节才发整句请求
+    engine.set_input("kaifazhema");
     let query = engine.query().unwrap();
     let surrounding = SurroundingText {
         before: "我们今天一起来".into(),
@@ -109,60 +110,85 @@ fn prediction_request_trims_context_and_only_fires_while_composing() {
     let request = submitted.borrow()[0].clone();
     assert_eq!(request.before, "天一起来");
     assert_eq!(request.after, "吧，");
-    assert_eq!(request.pinyin, "kai'fa");
-    assert_eq!(request.letters, "kaifa");
-    assert_eq!(request.syllables, 2);
-    assert_eq!(request.candidates[0], "开发");
+    assert_eq!(request.pinyin, "kai'fa'zhe'ma");
+    assert_eq!(request.letters, "kaifazhema");
+    assert_eq!(request.syllables, 4);
+    assert!(!request.candidates.is_empty());
     assert_eq!(request.max_items, 2);
     assert!(request.want_sentence);
 
-    // 拼音太短不发
+    // 短词不发：一个字母、1-2 个音节都不请求
     engine.set_input("k");
     assert_eq!(engine.request_prediction(None, &[]), None);
     engine.set_input("kaifa");
-    // 没有应用上下文也照发：词候选和整句都只靠拼音；本地历史不进请求
-    let kaifa = query.candidates.items[0].clone();
-    engine.commit(&kaifa);
-    engine.punctuate('.');
-    engine.set_input("kaifa");
-    assert_eq!(engine.request_prediction(None, &[]), Some(3));
-    let request = submitted.borrow()[1].clone();
-    assert!(request.before.is_empty());
-    assert!(request.want_sentence);
+    assert_eq!(engine.request_prediction(None, &[]), None);
+
     // 上屏之后不联想
     engine.clear();
     assert_eq!(engine.request_prediction(None, &[]), None);
 }
 
-/// 简拼（半数以上音节是缩写）只问整句补全：模型按声母凑出来的词大多是生造词（复合语气、符号映射）。
+/// 音节门槛：1-2 音节本地首选可靠，不发云；3 音节简拼词和整句都问不到，也不发。
 #[test]
-fn abbreviated_input_only_asks_for_the_sentence() {
+fn short_inputs_below_syllable_threshold_do_not_request_the_cloud() {
     let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let mut engine = engine().with_predictor(Box::new(EchoPredictor {
         submitted: submitted.clone(),
         replies: Vec::new(),
         sentence: true,
     }));
-    engine.set_input("zhsh");
-    let query = engine.query().unwrap();
-    assert_eq!(
-        engine.request_prediction(None, &query.candidates.items),
-        Some(1)
-    );
-    let request = submitted.borrow()[0].clone();
-    assert_eq!(request.letters, "zhsh");
-    assert_eq!(request.max_items, 0, "简拼不该要词");
-    assert!(request.want_sentence, "整句补全照常要");
+    // 单字、双字、双字词都不发
+    for input in ["kai", "kaifa", "ka"] {
+        engine.set_input(input);
+        let _ = engine.query();
+        assert_eq!(
+            engine.request_prediction(None, &[]),
+            None,
+            "{input} 不该发云"
+        );
+    }
+    assert!(submitted.borrow().is_empty());
+    // 3 音节简拼：简拼不问词、又不够长不要整句，没有可问的东西，不发
+    engine.set_input("kfz");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), None);
+    assert!(submitted.borrow().is_empty());
+}
 
-    // 完整拼音照常要词
-    engine.set_input("zhongshi");
-    let query = engine.query().unwrap();
-    assert_eq!(
-        engine.request_prediction(None, &query.candidates.items),
-        Some(2)
-    );
-    let request = submitted.borrow()[1].clone();
+/// 音节门槛：3 音节问云词但不要整句，4 音节才要整句；4 音节简拼仍只要整句。
+#[test]
+fn syllable_threshold_decides_words_and_sentence() {
+    let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let mut engine = engine().with_predictor(Box::new(EchoPredictor {
+        submitted: submitted.clone(),
+        replies: Vec::new(),
+        sentence: true,
+    }));
+
+    // 3 个音节全拼：要云词，不要整句
+    engine.set_input("kaifazhe");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), Some(1));
+    let request = submitted.borrow()[0].clone();
+    assert_eq!(request.syllables, 3);
     assert_eq!(request.max_items, 2);
+    assert!(!request.want_sentence);
+
+    // 4 个音节全拼：词和整句都要
+    engine.set_input("kaifazhema");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), Some(2));
+    let request = submitted.borrow()[1].clone();
+    assert_eq!(request.syllables, 4);
+    assert_eq!(request.max_items, 2);
+    assert!(request.want_sentence);
+
+    // 4 个音节简拼：模型按声母凑词不可靠，只问整句
+    engine.set_input("fhyq");
+    let _ = engine.query();
+    assert_eq!(engine.request_prediction(None, &[]), Some(3));
+    let request = submitted.borrow()[2].clone();
+    assert_eq!(request.max_items, 0);
     assert!(request.want_sentence);
 }
 
@@ -200,15 +226,15 @@ fn prediction_request_uses_the_scope_only() {
         sentence: false,
     };
     let mut engine = engine().with_predictor(Box::new(predictor));
-    engine.set_input("kaifazhe");
+    engine.set_input("kaifazhemen");
     for _ in 0..3 {
         engine.move_cursor_left();
     }
     assert_eq!(engine.request_prediction(None, &[]), Some(1));
     let request = submitted.borrow()[0].clone();
-    assert_eq!(request.pinyin, "kai'fa");
-    assert_eq!(request.letters, "kaifa");
-    assert_eq!(request.syllables, 2);
+    assert_eq!(request.pinyin, "kai'fa'zhe");
+    assert_eq!(request.letters, "kaifazhe");
+    assert_eq!(request.syllables, 3);
 }
 
 #[test]

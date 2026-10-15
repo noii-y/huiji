@@ -62,7 +62,7 @@ pub struct EnglishArgs {
     pub base_url: String,
 
     /// 模型名
-    #[arg(long, default_value = "deepseek-v4-flash")]
+    #[arg(long, default_value = "deepseek-flash")]
     pub model: String,
 
     /// 密钥；缺省读环境变量
@@ -112,7 +112,7 @@ pub struct PinyinArgs {
     pub base_url: String,
 
     /// 模型名
-    #[arg(long, default_value = "deepseek-v4-flash")]
+    #[arg(long, default_value = "deepseek-flash")]
     pub model: String,
 
     /// 密钥；缺省读环境变量
@@ -159,7 +159,7 @@ pub struct GenerateArgs {
     pub base_url: String,
 
     /// 模型名
-    #[arg(long, default_value = "deepseek-v4-flash")]
+    #[arg(long, default_value = "deepseek-flash")]
     pub model: String,
 
     /// 密钥；缺省读环境变量

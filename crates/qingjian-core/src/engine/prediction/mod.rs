@@ -57,6 +57,7 @@ impl Engine {
         self.prediction_sequence += 1;
         // 辅码态在按码筛词，云端词没有码、进来只会打乱；不发请求，槽位自然收起
         if self.aux_filter().is_some() {
+            tracing::debug!("云联想早退：辅码态");
             return None;
         }
         let policy = self.predictor.policy();
@@ -75,6 +76,7 @@ impl Engine {
             || (is_raw(scope, self.modes(), self.shuangpin, self.zhuyin)
                 && !super::query::mixed::is_mixed_scope(scope))
         {
+            tracing::debug!(english = self.english_mode, "云联想早退：英文/表达式/raw");
             return None;
         }
         // 整串是一个切不成拼音的拉丁词（linux、hello）：没有中文要译，也不发整句补全
@@ -84,6 +86,7 @@ impl Engine {
                 .as_ref()
                 .is_some_and(|words| words.get(scope).is_some())
         {
+            tracing::debug!("云联想早退：拉丁词");
             return None;
         }
         // 问字模式：问题本身就是全部上下文，不带应用文本、不要整句、本地没有候选可提示
@@ -109,6 +112,7 @@ impl Engine {
         let pinyin_source: &str = decoded.as_ref().map_or(pinyin_source, |d| d.pinyin());
         let letters = pinyin_source.chars().filter(|c| *c != '\'').count();
         if letters < MIN_PREDICTION_LETTERS {
+            tracing::debug!(letters, "云联想早退：字母数不足");
             return None;
         }
         let (pinyin, syllables, guess, abbreviated) =
@@ -138,6 +142,25 @@ impl Engine {
         if question {
             self.last_question_guess = guess.clone();
         }
+        // 简拼（半数以上音节是缩写）不问词：模型按声母凑出来的大多是生造词，只问整句；问字模式要答案，不受此限。
+        let want_words = !abbreviated || question;
+        // 整句补全要够长：3 个音节是词/短语，本地首选可靠，整句没有额外价值；4 个音节以上本地组句才明显出错。
+        let want_sentence =
+            policy.sentence && !question && syllables >= MIN_CLOUD_SENTENCE_SYLLABLES;
+        // 短词不发云：1-2 音节本地首选已经足够可靠，发了只是白花 token；
+        // 3 音节的简拼既不问词、又不够长不要整句，同样没有可问的东西；问字模式不受这些门槛限制。
+        if !question && (syllables < MIN_CLOUD_SYLLABLES || (!want_words && !want_sentence)) {
+            tracing::debug!(
+                pinyin = %pinyin,
+                letters,
+                syllables,
+                abbreviated,
+                want_words,
+                want_sentence,
+                "云联想门槛未过，不发请求"
+            );
+            return None;
+        }
         let request = PredictionRequest {
             sequence: self.prediction_sequence,
             kind,
@@ -152,14 +175,8 @@ impl Engine {
                 .map(|c| c.text.clone())
                 .collect(),
             guess,
-            // 简拼（半数以上音节是缩写）不问词：模型按声母凑出来的大多是生造词（复合语气、符号映射），
-            // 只问整句补全；问字模式的答案不受这条限制（答案本来就对不上问题的拼音）。
-            max_items: if abbreviated && !question {
-                0
-            } else {
-                policy.max_items
-            },
-            want_sentence: policy.sentence && !question,
+            max_items: if want_words { policy.max_items } else { 0 },
+            want_sentence,
             text: String::new(),
             // 组句时让云端顺手给整句外文：目标是学习语言；没接释义表（学习语言为中文）时退到英语。
             target_language: match self.translator.language() {
@@ -171,6 +188,13 @@ impl Engine {
         };
         self.last_prediction_kind = kind;
         self.last_prediction_scope = scope.to_owned();
+        tracing::debug!(
+            pinyin = %request.pinyin,
+            syllables = request.syllables,
+            max_items = request.max_items,
+            want_sentence = request.want_sentence,
+            "云联想已提交"
+        );
         self.predictor.submit(request);
         Some(self.prediction_sequence)
     }

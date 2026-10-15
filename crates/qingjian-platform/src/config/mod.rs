@@ -319,14 +319,14 @@ enabled = true
 enabled = false
 # OpenAI 兼容接口地址与模型名（DeepSeek 默认值）
 base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
+model = "deepseek-flash"
 # 推理强度（reasoning_effort）：none 关掉模型的思考，联想要快；留空则不发这个参数
 reasoning_effort = "none"
 # 密钥：填在这里，或留空并设置 api_key_env 指定的环境变量（偏好设置里填的密钥写进配置同目录的 .env）
 # api_key = ""
 api_key_env = "QINGJIAN_API_KEY"
 # 单次请求超时（毫秒）、停止敲键多久后才发请求（毫秒）
-timeout_ms = 5000
+timeout_ms = 8000
 debounce_ms = 300
 # 光标前 / 后最多发多少个字符——这是发往云端的上下文上限
 lookback = 64
@@ -561,7 +561,7 @@ mod tests {
         let config: Config = toml::from_str("[predict]\nenabled = true\nlookback = 10\n").unwrap();
         assert!(config.predict.enabled);
         assert_eq!(config.predict.lookback, 10);
-        assert_eq!(config.predict.model, "deepseek-v4-flash");
+        assert_eq!(config.predict.model, "deepseek-flash");
         assert_eq!(config.predict.reasoning_effort, "none");
         assert_eq!(config.predict.api_key_env, "QINGJIAN_API_KEY");
     }

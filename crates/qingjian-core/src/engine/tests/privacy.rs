@@ -74,7 +74,7 @@ fn private_input_sends_nothing_to_the_cloud() {
         .with_translator(Box::new(LearningTranslator::default()))
         .with_gloss_filler(Box::new(filler));
     engine.set_private(true);
-    engine.set_input("kaifa");
+    engine.set_input("kaifazhema");
     let query = engine.query().unwrap();
     assert_eq!(
         engine.request_prediction(None, &query.candidates.items),
@@ -87,7 +87,7 @@ fn private_input_sends_nothing_to_the_cloud() {
     assert!(requested.lock().unwrap().is_empty());
 
     engine.set_private(false);
-    engine.set_input("kaifa");
+    engine.set_input("kaifazhema");
     let query = engine.query().unwrap();
     assert!(
         engine

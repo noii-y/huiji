@@ -20,7 +20,7 @@ pub struct PredictConfig {
     /// 存放密钥的环境变量名。
     pub api_key_env: String,
 
-    /// 单次请求超时（毫秒），超时即丢。
+    /// 单次请求超时（毫秒），超时即丢。联想异步不阻塞输入，长句/脏词偶尔慢，给到 8 秒更宽容。
     pub timeout_ms: u64,
 
     /// 防抖：停止敲键多久之后才真正发请求（毫秒）。
@@ -49,10 +49,10 @@ impl Default for PredictConfig {
         Self {
             enabled: false,
             base_url: "https://api.deepseek.com".to_owned(),
-            model: "deepseek-v4-flash".to_owned(),
+            model: "deepseek-flash".to_owned(),
             api_key: None,
             api_key_env: "QINGJIAN_API_KEY".to_owned(),
-            timeout_ms: 5000,
+            timeout_ms: 8000,
             debounce_ms: 300,
             lookback: 64,
             lookahead: 32,
