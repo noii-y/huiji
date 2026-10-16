@@ -25,7 +25,6 @@ impl Router {
             self.stop_rescoring();
             return;
         }
-        self.attach_loaded_model();
         let built = self.engine.query().ok().map(|query| {
             let (preedit, cursor, typed_keys) = marked_parts(&query);
             (query.candidates.items.clone(), preedit, cursor, typed_keys)

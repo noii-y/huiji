@@ -5,7 +5,6 @@
 //! 节拍由工人循环驱动：[`Router::next_tick`] 说下次多久来一次 [`Router::tick`]；DLL 组句期间每 80 ms 的 `Poll` 也顺带 tick。
 //! 加载在 [`loader`]，进行态在 [`state`]。
 
-mod loader;
 mod state;
 
 use std::path::{Path, PathBuf};
@@ -15,26 +14,14 @@ use qingjian_core::CandidateLayout;
 use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::SessionId;
 
-use self::loader::Loaded;
-pub(crate) use self::loader::ModelLoader;
 pub(crate) use self::state::RescoreState;
 use super::Router;
 use super::composed::{Composed, marked_parts};
 
-/// P2C 优先，同类模型里用户目录优先；没有 P2C 才回退字级模型。
-pub fn find_model(user_dir: Option<&Path>, bundled_root: &Path) -> Option<PathBuf> {
-    let candidates = [
-        user_dir.map(|dir| dir.join("models/hanzhang-tongbian")),
-        user_dir.map(|dir| dir.join("model-p2c")),
-        Some(bundled_root.join("data/models/hanzhang-tongbian")),
-        user_dir.map(|dir| dir.join("models/hanzhang-zhiwei")),
-        user_dir.map(|dir| dir.join("model")),
-        Some(bundled_root.join("data/models/hanzhang-zhiwei")),
-    ];
-    candidates
-        .into_iter()
-        .flatten()
-        .find_map(|dir| qingjian_neural::find_model(&dir))
+/// 灰迹不加载本地神经整句模型：长句纠错与翻译交给云端，离线只保留 opus-mt 词级翻译兜底。
+/// 保留这个函数签名（启动时调用）固定返回空，省掉找权重文件的磁盘扫描。
+pub fn find_model(_user_dir: Option<&Path>, _bundled_root: &Path) -> Option<PathBuf> {
+    None
 }
 
 impl Router {
@@ -64,47 +51,16 @@ impl Router {
         }
     }
 
-    /// 在后台线程加载模型；没有模型文件就什么都不做。
+    /// 灰迹不加载本地神经整句模型：即便设置里 `[model] enabled = true` 也不加载，长句纠错交给云端。
     fn load_local_model(&mut self) {
-        if self.model_loader.is_some() || self.engine.has_sentence_scorer() {
-            return;
-        }
-        let Some(path) = &self.model_path else {
-            tracing::info!("没有本地整句模型文件，不重排");
-            return;
-        };
-        self.model_loader = ModelLoader::spawn(path);
+        self.engine.set_async_sentence_scorer(None);
+        self.rescore.stop();
     }
 
     /// 卸掉模型（配置关掉）。
     fn unload_local_model(&mut self) {
-        self.model_loader = None;
         self.engine.set_async_sentence_scorer(None);
         self.rescore.stop();
-        tracing::info!("本地整句模型已卸载（[model] enabled = false）");
-    }
-
-    /// 加载线程有结果了就接到 Engine 上；每次按键 / tick 顺手看一眼，不阻塞。
-    pub(super) fn attach_loaded_model(&mut self) {
-        let Some(loader) = &self.model_loader else {
-            return;
-        };
-        match loader.poll() {
-            Loaded::Pending => {}
-            Loaded::Done(result) => {
-                match result {
-                    Ok(scorer) => {
-                        self.engine.set_async_sentence_scorer(Some(scorer));
-                        // 模型上线了：日志里补一条会话信息，之后的条目知道重排开着
-                        self.engine
-                            .log_session(env!("CARGO_PKG_VERSION"), "windows");
-                    }
-                    Err(error) => tracing::warn!(%error, "本地整句模型加载失败，不重排"),
-                }
-                self.model_loader = None;
-            }
-            Loaded::Gone => self.model_loader = None,
-        }
     }
 
     /// 组句结束：什么都不等了；应用前文也作废（下一段组句 DLL 会再送）。
@@ -151,10 +107,9 @@ impl Router {
             })
     }
 
-    /// 到点了：接上加载好的模型、推进重排、看一眼配置文件、探一次 UI 线程活性。
+    /// 到点了：推进重排、看一眼配置文件、探一次 UI 线程活性。
     /// 工人循环超时与 DLL 的 `Poll` 都会调。
     pub fn tick(&mut self) {
-        self.attach_loaded_model();
         self.advance_rescoring();
         self.poll_config_reload();
         self.candidates.watchdog();

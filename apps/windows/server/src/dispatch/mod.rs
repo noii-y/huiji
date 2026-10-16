@@ -32,7 +32,7 @@ pub use self::config::RouterConfig;
 use self::reload::ConfigReload;
 pub use self::reload::{DataDirs, attach_predictors};
 pub use self::rescore::find_model;
-use self::rescore::{ModelLoader, RescoreState};
+use self::rescore::RescoreState;
 use self::session::SessionInfo;
 pub use self::status::{NoopStatusSink, StatusEvent, StatusSink, StatusView};
 use self::translate::Translation;
@@ -119,9 +119,6 @@ pub struct Router {
     /// 形码码表（`wubi/wubi86.tsv`，启动时找好的，见 [`code::find_code_table`]）；没有为 `None`。
     code_table: Option<PathBuf>,
 
-    /// 进行中的模型加载；加载完接到 Engine 上就清掉。
-    model_loader: Option<ModelLoader>,
-
     /// 上次套用的 `[model]`，变了才重载 / 卸载。
     applied_model: LocalModelConfig,
 
@@ -164,7 +161,6 @@ impl Router {
             last_shown: None,
             model_path: None,
             code_table: None,
-            model_loader: None,
             applied_model: LocalModelConfig::default(),
             surrounding_before: String::new(),
             rescore: RescoreState::default(),
