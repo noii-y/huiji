@@ -17,9 +17,6 @@ pub enum ConvertError {
     #[error(transparent)]
     Glossary(#[from] qingjian_translate::GlossaryError),
 
-    #[error(transparent)]
-    Neural(#[from] qingjian_neural::NeuralError),
-
     /// `pack` 少了必填的元数据（只有 `codes` 有缺省值）。
     #[error("pack {kind} needs --name")]
     MissingName {

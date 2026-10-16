@@ -9,11 +9,14 @@ members = [
     "crates/qingjian-predict",
     "crates/qingjian-lm",
     "crates/qingjian-format",
-    "crates/qingjian-neural",
     "crates/qingjian-render",
     "crates/qingjian-update",
-    "apps/linux/server", "apps/cli", "apps/macos", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "tools/dict-convert", "tools/gloss-gen", "tools/release-sign",
+    "apps/cli", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "tools/dict-convert", "tools/gloss-gen", "tools/release-sign",
 ]
+
+# 灰迹只发布 Windows：apps/linux、apps/macos 与本地整句模型 crate 不纳入工作区，
+# 目录保留以便对照上游，构建时不解析、不编译（含章·通变 candle 随之一并排除）。
+exclude = ["apps/linux", "apps/macos", "crates/qingjian-neural"]
 
 [workspace.package]
 version = "0.1.1"
@@ -34,7 +37,6 @@ qingjian-platform = { path = "crates/qingjian-platform" }
 qingjian-predict = { path = "crates/qingjian-predict" }
 qingjian-lm = { path = "crates/qingjian-lm" }
 qingjian-format = { path = "crates/qingjian-format" }
-qingjian-neural = { path = "crates/qingjian-neural" }
 qingjian-render = { path = "crates/qingjian-render" }
 qingjian-update = { path = "crates/qingjian-update" }
 
@@ -59,10 +61,6 @@ ferrous-opencc = { version = "0.4.0", default-features = false, features = ["s2t
 # .qj 数据容器：mmap 打开、结构体数组零拷贝读取
 memmap2 = "0.9"
 zerocopy = { version = "0.8", features = ["derive"] }
-
-# 本地神经语言模型推理（字级 Transformer，权重 safetensors）
-candle-core = "0.11.0"
-candle-nn = "0.11.0"
 
 # 云联想：OpenAI 兼容接口客户端与它需要的异步运行时
 async-openai = { version = "0.42.0", default-features = false, features = ["chat-completion", "native-tls", "byot"] }

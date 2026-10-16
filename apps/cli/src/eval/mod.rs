@@ -8,8 +8,6 @@
 
 pub mod coverage;
 mod extract;
-pub mod generate;
-pub mod p2c;
 mod pair;
 mod report;
 mod transcribe;
@@ -231,7 +229,4 @@ pub enum EvalError {
         #[source]
         source: std::io::Error,
     },
-
-    #[error("P2C generation failed: {0}")]
-    Generate(#[from] qingjian_neural::NeuralError),
 }

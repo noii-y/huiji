@@ -8,12 +8,6 @@ pub enum ColdError {
     #[error(transparent)]
     Json(#[from] serde_json::Error),
 
-    #[error(transparent)]
-    Neural(#[from] qingjian_neural::NeuralError),
-
     #[error("invalid cold evaluation row: {0}")]
     Invalid(String),
-
-    #[error("Hanzhang Tongbian model requires a <sep> token in its vocabulary")]
-    Model,
 }

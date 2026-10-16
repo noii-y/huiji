@@ -1,7 +1,6 @@
 use qingjian_dictionary::DictionaryError;
 use qingjian_learning::LearningError;
 use qingjian_lm::LmError;
-use qingjian_neural::NeuralError;
 use qingjian_platform::ConfigError;
 #[cfg(any(
     feature = "local-nmt",
@@ -18,9 +17,6 @@ pub enum CliError {
 
     #[error(transparent)]
     Dictionary(#[from] DictionaryError),
-
-    #[error(transparent)]
-    Neural(#[from] NeuralError),
 
     #[error(transparent)]
     Glossary(#[from] GlossaryError),
