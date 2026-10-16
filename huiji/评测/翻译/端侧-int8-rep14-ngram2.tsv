@@ -1,0 +1,101 @@
+编号	中文原句	场景	端侧译文	推理ms	端到端ms
+1	你今天晚上有空吗？	日常聊天	Are you free tonight evening?	119.8	119.8
+2	我刚下班，正在回家的路上。	日常聊天	I just got off work and was on my way home.	202.1	202.2
+3	周末一起去看电影吧。	日常聊天	Let's go to the movies on weekend weekends and see a movie.	231.0	231.1
+4	你吃饭了吗？我还没吃呢。	日常聊天	Have you eaten food? Did you eat dinner? I haven't even eaten yet. I have not already eaten it yet, but I still haven’t eaten.	548.5	548.6
+5	今天天气真不错，适合出去走走。	日常聊天	It's nice weather today.	302.8	302.9
+6	我到楼下了，你下来吧。	日常聊天	I'll be downstairs down the stairs, and you come down.	173.3	173.4
+7	明天记得带伞，好像要下雨。	日常聊天	Remember to bring an umbrella tomorrow morning, like it's gonna rain.	182.3	182.4
+8	你在干嘛呢？怎么半天不回消息。	日常聊天	What are you doing? Why can't the message not be answered for a day in half of the day, so that it will never come back to him.	392.0	392.1
+9	我先洗个澡，一会儿聊。	日常聊天	I'll take a shower first, we talk later.	103.7	103.8
+10	早点休息，别熬夜了。	日常聊天	Rest early and rest early, don't stay up all night.	113.9	113.9
+11	我想吃火锅，你觉得哪家好吃？	生活出行	I'd like to have a hotpot. Which one do you think is good?	132.6	132.7
+12	帮我点一杯奶茶，三分糖去冰。	生活出行	Order me a cup of milk tea with milked tea and three cents sugar to ice.	145.9	146.0
+13	这个多少钱？能便宜点吗？	生活出行	How much is this money for? Can it be cheaper cheap?	134.5	134.6
+14	我在地铁站门口等你。	生活出行	I'll wait for you at the front door of a subway station and waiting by the entrance to the metro station.	181.7	181.8
+15	外卖到了，你去拿一下。	生活出行	I've got the takeout delivery, you go get it.	108.0	108.1
+16	菜有点咸了，下次少放点盐。	生活出行	The food is a little salty. Next next time, put less salt on it.	160.0	160.1
+17	我订了明天早上八点的闹钟。	生活出行	I have a reservation for the 8: 8:00 alarm clock tomorrow morning at 8.00.	123.0	123.1
+18	超市里人好多，排队排了半天。	生活出行	The supermarkets were so crowded, they lined up for half a day in queues.	144.7	144.8
+19	这双鞋有四十二码的吗？	生活出行	Do these shoes have a 42-42-yard pair of 42 sizes?	226.8	226.9
+20	我们坐高铁还是飞机去？	生活出行	Should we take the high-calk or fly a plane?	304.9	305.0
+21	这个需求今天能上线吗？	工作职场	Can this demand be online today?	387.7	387.8
+22	下午三点开会，别迟到了。	工作职场	The meeting will meet at 3:00 3 p.m., and don't be late for the three-day session.	296.7	296.8
+23	文档我已经更新好了，你看一下。	工作职场	I've updated the document to update it, see if you take a look at it.	213.3	213.4
+24	这个 bug 我复现了，正在排查。	工作职场	This bug I'm coming back, checking it.	133.6	133.7
+25	麻烦把昨天的报表发我一份。	工作职场	Please send me a copy of yesterday's report, please.	164.5	164.6
+26	项目进度比预期慢了两天。	工作职场	Project progress was two days slower than expected, and the project schedule had been slow by a two-day time before expectations.	325.4	325.5
+27	客户那边还没回复，我再催催。	工作职场	The client's office hasn't answered the response from the customer. I have to hurry again, and I will be rushing.	304.1	304.2
+28	你把代码提交一下，我来 review。	工作职场	I'll review.	97.7	97.8
+29	会议改到明天上午十点了。	工作职场	The meeting will be rescheduled until 10:00 tomorrow morning at 10 a.m.	260.2	260.3
+30	这个方案我觉得还得再想想。	工作职场	And I think this is a solution that has to be considered again and thought about.	256.6	256.6
+31	我今天好累啊，不想动。	情绪口语	I'm so tired today, I don't want to move.	114.9	114.9
+32	真的吗？太好啦！	情绪口语	Really? Really really? It's so great!	81.8	81.9
+33	哎呀，我忘了带钥匙。	情绪口语	Gee, I forgot the key keys.	60.0	60.0
+34	这也太搞笑了吧，哈哈哈。	情绪口语	That's too funny, isn't it? Ha-ha hahaha.	162.6	162.7
+35	我有点紧张，怕搞砸了。	情绪口语	I'm a little nervous and I kind of nervous, afraid I might screw up.	149.7	149.8
+36	算了，不想了，顺其自然吧。	情绪口语	Forget it, forget about it or not, no more. Just let the natural of nature be as it is.	163.9	164.0
+37	气死我了，怎么又这样。	情绪口语	I'm so mad at my anger, why are you acting like this again?	121.9	122.0
+38	哇，这个也太好看了吧！	情绪口语	Wow, this is so beautiful! This one looks great!	85.0	85.1
+39	我好纠结，不知道选哪个。	情绪口语	I'm so confused, I don't know which one to choose.	112.5	112.6
+40	没事，慢慢来，不着急。	情绪口语	It's okay, take your time slowly and no rush.	93.4	93.5
+41	你知道他去哪儿了吗？	问句	Do you know where he went?	119.6	119.7
+42	这个字怎么念来着？	问句	How did you read this word?	73.1	73.1
+43	为什么我的手机这么卡？	问句	Why is my cell phone so stuck on this card?	79.9	80.0
+44	我们几点出发比较合适？	问句	What time do we start at? Is it more appropriate when we leave?	107.1	107.2
+45	你有没有看见我的眼镜？	问句	Did you see my glasses before you saw my eyes?	78.3	78.4
+46	这家店几点关门啊？	问句	When is this store closing? What time does the shop close?	95.3	95.4
+47	你觉得我穿这件好看吗？	问句	Do you think I look good in this?	74.1	74.1
+48	怎么办？我把杯子打碎了。	问句	What should we do? I broke the glass and broken it.	143.5	143.6
+49	这个怎么用？教教我呗。	问句	How does this work? Teach me to teach.	80.9	81.0
+50	还有多远才到啊？	问句	How far back is it to get?	62.4	62.5
+51	这波操作我是真的服了。	网络用语	This wave operation I've really ung this game is my real suit.	124.6	124.7
+52	绝绝子，这也太好吃了吧。	网络用语	That's too good to be so delicious, is it?	96.1	96.1
+53	我直接一整个无语住了。	网络用语	I'm straight and completely speechless.	68.1	68.2
+54	这就是传说中的神仙颜值吗。	网络用语	Is this the value of what is told in legends? Is that (the number of) a fairy-g and pineth which are known by saying?"? Or is it [a Qana's]?? or is this (trems).	421.6	421.7
+55	摸鱼一时爽，一直摸鱼一直爽。	网络用语	Feel the fish for a while and always feel it's good all the time.	124.8	124.9
+56	破防了家人们，真的好感动。	网络用语	Breaking up our homes and families, really moved.	81.9	81.9
+57	这剧情也太离谱了吧。	网络用语	This is a far out of the way.	68.2	68.3
+58	笑死，根本停不下来。	网络用语	Laughing to the death of a laugh, it can't stop.	129.8	129.9
+59	你礼貌吗？我不理解但大受震撼。	网络用语	Do you be polite? I do not understand but am shaken with great shock, and a terrible shock.	487.6	487.7
+60	这波啊，这波是在大气层。	网络用语	This wave, this wave is in the atmosphere of the atmospheric atmosphere.	118.3	118.4
+61	我本来打算今天去图书馆看书的，结果下大雨就没去成。	长句	I was planning to go to the library today and read a book at the Library, but it rained so much rain that I didn't get there.	222.2	222.3
+62	如果你明天有空的话，我们可以一起去那个新开的商场逛逛。	长句	If you're free tomorrow if you have time tomorrow, we can hang out at the new opening mall.	282.6	282.7
+63	他说他会在下班之前把报告写完，但我觉得可能来不及。	长句	He said he would finish his report before the end of work, but I thought it might be too late.	193.8	193.9
+64	这件事情没有你想的那么简单，我们得好好商量一下。	长句	This is not as simple as you thought it would be. We need to talk about this a little bit, and we'll have to discuss that.	233.3	233.4
+65	我昨天晚上失眠了，翻来覆去怎么都睡不着。	长句	I couldn't sleep last night when I lost my sleep, and I can hardly fall asleep.	163.7	163.8
+66	不管结果怎么样，至少我们努力过了，就不会后悔。	长句	Whatever the outcome, at least we've worked hard and tried, we won't regret it.	179.4	179.5
+67	那个电影我看了一半就睡着了，听说结局还挺反转的。	长句	I fell asleep in half the movie, and I heard it was a rather reverse ending.	145.2	145.3
+68	等我把手上这点活儿干完，就陪你下楼遛狗。	长句	I'll walk the dog downstairs with you when I finish this job on my hands and do that, then we will go down to your house to carry a dog.	281.3	281.4
+69	她不仅人长得漂亮，性格也特别好，大家都很喜欢她。	长句	She's not only beautiful, but also very good-looking and special character. Everyone like her because she is a lot of everyone.	225.1	225.2
+70	我记得钥匙就放在桌上的，怎么一转眼就不见了。	长句	I remember the key was right on the table, and it left the keys on my desk. It just turned around and disappeared.	296.7	296.8
+71	现在是下午四点半，还有两个小时下班。	数字时间	Now it's 4:30 at 4.30:30 p.m., and we have two hours to finish work in the next hour of 2: half hours, which is now 1:4.30p. am, with 2 more hours remaining before you leave your business.	391.6	391.7
+72	我们约在周六上午十点，老地方见。	数字时间	We'll meet at the old place on Saturday morning, 10 a.m. and then we will see you back in the usual place.	206.0	206.1
+73	这个月房租是三千二，我已经转给房东了。	数字时间	This month's rent is $3,322 per month at the monthly rental rate of $32,200. I already transferred it to my landlord.	272.6	272.7
+74	他今年二十五岁，比我小两岁。	数字时间	He's 25 years old, he is 25 and 25 this year, 2 two years younger than me.	234.5	234.5
+75	火车晚上七点二十发车，别误点了。	数字时间	The train leaves at 7:20 p.m. at 7.20 P night evening at 7.:20, the train's leaving its bus on a train to be left at 7:00: 20 PM hours. Don't miss it.	360.5	360.6
+76	我买了两张三十块钱的票，一共六十。	数字时间	I bought two tickets for a total of 30 US$30, 60.	119.7	119.8
+77	从这儿到机场大概要四十分钟。	数字时间	Forty minutes from here to the airport, 40 minutes between this point and airports.	128.5	128.7
+78	会议预计开一个半小时。	数字时间	The meeting is expected to be open by one and half an hour and a half hours.	130.7	130.8
+79	这家店开了快十年了，生意一直不错。	数字时间	This shop has been open for almost 10 years now, and it's been running pretty good business.	189.5	189.5
+80	我每天早上七点起床，八点出门。	数字时间	I wake up every morning at 7:00 a.m., 7 am every day in the morning and go out of my house at 8:00 p. m. at 8 o'clock.	470.3	470.4
+81	手机快没电了，你带充电器了吗？	日常琐事	The phone's running out of battery power. You got a charger?	115.9	116.0
+82	我把 Wi-Fi 密码忘了，你知道是多少吗？	日常琐事	I forgot my Wi-Fi password to forget the wi-Fi password code. Do you know how much it is?	180.8	180.8
+83	快递还没到，我查一下物流。	日常琐事	The delivery's not yet on the express delivery. Let me check logistics, let me look at it and see what I can do with logistics.	209.4	209.5
+84	这衣服得手洗，不能放洗衣机。	日常琐事	The clothes have to wash their hands and wash them. They can't leave the washing machine in a laundry machine.	190.6	190.7
+85	我有点感冒，嗓子不太舒服。	日常琐事	I got a cold cold, and my voice's not feeling well.	114.0	114.1
+86	多喝点热水，好好睡一觉就好了。	日常琐事	Have some more hot water and drink warm water so you can just get a good night's sleep.	144.2	144.3
+87	你家猫也太可爱了吧，叫什么名字？	日常琐事	Isn't your cat a cute, lovely cat-cat? What name is it called?	133.9	134.0
+88	楼下新开了家咖啡店，改天去尝尝。	日常琐事	There is a new coffee shop downstairs, and we'll try some of it sometime.	134.8	134.9
+89	我把窗户打开透透气，屋里有点闷。	日常琐事	I open my window for a little air, and the room is kind of boring.	192.8	192.9
+90	钥匙在门垫下面，你自己开门吧。	日常琐事	The key is under the door mat. You can open it yourself, you will have to open the doors.	167.8	167.9
+91	这道题我想了半天也没弄明白。	日常琐事	I've been thinking about this topic for a whole day, and I haven't figured it out.	227.2	227.2
+92	老师说明天要交作业，你写完没？	日常琐事	The teacher said he had to hand in his homework. Are you finished writing?	139.8	139.9
+93	我办了张健身卡，希望能坚持下去。	日常琐事	I made a gym and fitness card, so I hope to keep it going.	130.7	130.8
+94	路上注意安全，到了给我发个消息。	日常琐事	Be safe and on the road. Send me a message when you arrive.	160.6	160.7
+95	这电视信号不太好，画面一卡一卡的。	日常琐事	This TV signal doesn't look good on the television. The picture is a card-a-card, one-car-ac/c card.	259.1	259.2
+96	我把垃圾顺手带下去扔了。	日常琐事	I took the garbage out of my trash and brought it down with me.	129.1	129.1
+97	你声音怎么了？是不是感冒了？	日常琐事	What's wrong with your voice? Did you catch a cold cold?	169.9	170.0
+98	今天地铁特别挤，差点没挤上去。	日常琐事	The subway is especially crowded today, and the metro was so squeezed today that it almost didn't get up.	215.7	215.8
+99	我给你留了点饭，在锅里热着呢。	日常琐事	I left you some dinner. It's hot in the pot.	158.8	158.8
+100	不管多晚，到家了记得跟我说一声。	日常琐事	When you get home, tell me when you're home.	126.4	126.5

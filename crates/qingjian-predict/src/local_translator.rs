@@ -80,11 +80,13 @@ fn build_translator(model_dir: &Path) -> Result<Translator<SpmTokenizer>, LocalT
 
 /// 后台线程主循环：收一句、译一句、把结果发回去。
 fn run(job_rx: Receiver<Job>, result_tx: Sender<Prediction>, translator: Translator<SpmTokenizer>) {
-    // Python 探针验证过：默认生成参数会让 opus-mt 重复退化，这两个参数把循环压掉。
+    // 解码参数来自 100 句日常话评测（huiji/tools/translate_probe.py，int8）：
+    // 默认参数 100 句里 78 句重复退化；rep1.2/ngram3 剩 21 句；rep1.4/ngram2 压到 8 句，
+    // 且没有引入新的语法问题。数字、术语、网络流行语的误译是小模型天花板，不在此解决，靠云端。
     let options = TranslationOptions {
         beam_size: 2,
-        repetition_penalty: 1.2,
-        no_repeat_ngram_size: 3,
+        repetition_penalty: 1.4,
+        no_repeat_ngram_size: 2,
         ..Default::default()
     };
 
@@ -254,7 +256,7 @@ mod tests {
     #[test]
     fn 组句请求标记为compose() {
         let (mut translator, job_rx) = harness();
-        translator.submit(request(4, PredictionKind::Compose, "你好", ""));
+        translator.submit(request(4, PredictionKind::Compose, "", "你好"));
         let (_, text, compose) = job_rx.try_recv().expect("任务应进入队列");
         assert_eq!(text, "你好");
         assert!(compose);
