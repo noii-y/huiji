@@ -56,7 +56,7 @@ impl Host {
         if force || config.predict != self.applied_predict {
             if config.predict.enabled {
                 // 没密钥等失败只记日志、退回不联想：输入优先于一切附加功能
-                match CloudPredictor::new(&config.predict) {
+                match CloudPredictor::new(&config.predict, None) {
                     Ok(predictor) => self.engine.set_predictor(Box::new(predictor)),
                     Err(error) => {
                         tracing::warn!(%error, "云联想未启用");

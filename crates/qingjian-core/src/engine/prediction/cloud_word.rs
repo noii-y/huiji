@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::candidate::{Candidate, CandidateKind};
 
 /// 云端给出的一个词候选：文本加全拼音节，音节用来校验它确实对得上用户敲的拼音，也用来记成用户词。
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CloudWord {
     /// 词。
     pub text: String,

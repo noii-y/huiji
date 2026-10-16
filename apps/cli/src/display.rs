@@ -178,6 +178,9 @@ pub fn show_prediction(engine: &mut Engine, candidates: &[Candidate]) {
             if let Some(sentence) = &prediction.sentence {
                 println!("  ☁ 整句: {sentence}");
             }
+            if let Some(translation) = &prediction.translation {
+                println!("  ☁ 译文: {translation}");
+            }
             println!("  predict {}", fmt_duration(start.elapsed()));
             return;
         }

@@ -144,7 +144,7 @@ pub fn user_prompt(request: &PredictionRequest) -> String {
 }
 
 /// 解析后的回复。
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Reply {
     /// 云端词（组句联想）或答案（问字模式，音节为空、带读音）。
     pub words: Vec<CloudWord>,

@@ -395,7 +395,8 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
             return Err(CliError::LocalNmtNotCompiled);
         }
     } else if config.predict.enabled {
-        let predictor = CloudPredictor::new(&config.predict)?;
+        // 评测器不挂磁盘缓存：每次都走真实请求，避免读到历史结果污染首选率统计。
+        let predictor = CloudPredictor::new(&config.predict, None)?;
         engine = engine.with_predictor(Box::new(predictor));
     }
     Ok(engine)

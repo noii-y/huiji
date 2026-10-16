@@ -61,7 +61,7 @@ pub fn attach_predictors(
     user_dir: Option<&Path>,
     bundled_root: &Path,
 ) {
-    let cloud = build_cloud_predictor(predict);
+    let cloud = build_cloud_predictor(predict, user_dir);
     let local = build_local_translator(user_dir, bundled_root);
     let predictor: Box<dyn Predictor> = match (cloud, local) {
         (Some(c), Some(l)) => Box::new(DualPredictor::new(Some(c), Some(l))),
@@ -82,10 +82,10 @@ pub fn attach_predictors(
 pub fn attach_predictors(
     engine: &mut Engine,
     predict: &PredictConfig,
-    _user_dir: Option<&Path>,
+    user_dir: Option<&Path>,
     _bundled_root: &Path,
 ) {
-    match build_cloud_predictor(predict) {
+    match build_cloud_predictor(predict, user_dir) {
         Some(cloud) => engine.set_predictor(Box::new(cloud)),
         None => engine.set_predictor(Box::new(NoPredictor)),
     }
@@ -93,12 +93,15 @@ pub fn attach_predictors(
 }
 
 /// 构建云端拼音纠错器：开着且密钥能解析才返回，否则 `None`（安静退回端侧 / 本地候选）。
-fn build_cloud_predictor(predict: &PredictConfig) -> Option<CloudPredictor> {
+fn build_cloud_predictor(
+    predict: &PredictConfig,
+    user_dir: Option<&Path>,
+) -> Option<CloudPredictor> {
     if !predict.enabled {
         tracing::info!("云联想未开启（[predict] enabled = false）");
         return None;
     }
-    match CloudPredictor::new(predict) {
+    match CloudPredictor::new(predict, user_dir) {
         Ok(predictor) => {
             tracing::info!(model = %predict.model, "云端拼音纠错已接入");
             Some(predictor)
