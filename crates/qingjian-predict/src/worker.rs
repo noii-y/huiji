@@ -11,6 +11,7 @@ use crate::cache::PredictionCache;
 use crate::chat_client::ChatClient;
 use crate::disk_cache::DiskCache;
 use crate::error::PredictError;
+use crate::suspension::Suspension;
 
 /// 内存缓存条数：只管当前会话里退格重打这类即时反复。
 const CACHE_CAPACITY: usize = 64;
@@ -33,6 +34,9 @@ pub struct Worker {
 
     /// 磁盘结果缓存（键只看拼音，跨重启、断网也能命中）。云没启用时为 `None`。
     disk: Option<DiskCache>,
+
+    /// 账户失败（密钥无效 / 欠费 / 被拒）后的暂停：暂停期间不发新的网络请求，本地候选照常。
+    suspension: Suspension,
 }
 
 /// 缓存里存的是解析后的回复。
@@ -53,6 +57,7 @@ impl Worker {
             debounce,
             cache: PredictionCache::with_capacity(CACHE_CAPACITY),
             disk,
+            suspension: Suspension::default(),
         }
     }
 
@@ -95,11 +100,20 @@ impl Worker {
             self.cache.insert(key, reply.clone());
             return Some(reply);
         }
+        // 账户失败暂停期：不发新网络请求。内存 / 磁盘缓存上面已经查过，没命中就直接
+        // 交回本地候选与端侧译文（云只是增强，停了不影响打字）。
+        if self.suspension.active(Instant::now()) {
+            return None;
+        }
         let start = Instant::now();
         let mut reply = match runtime.block_on(self.client.complete(&request)) {
             Ok(reply) => reply,
             Err(error) => {
-                tracing::warn!(sequence = request.sequence, %error, "联想失败");
+                // 密钥无效 / 欠费 / 被拒：暂停一段时间，期间不再发，避免白烧请求、刷日志；
+                // record 内部已记一条带原因的日志，普通失败才在这里补一条。
+                if !self.suspension.record(&error, Instant::now(), "联想") {
+                    tracing::warn!(sequence = request.sequence, %error, "联想失败");
+                }
                 return None;
             }
         };

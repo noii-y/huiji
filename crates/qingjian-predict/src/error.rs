@@ -24,3 +24,18 @@ pub enum PredictError {
     #[error("failed to encode request: {0}")]
     Encode(#[from] serde_json::Error),
 }
+
+impl PredictError {
+    /// 账户层面的失败：密钥无效、欠费、被拒（401 / 402 / 403）。
+    /// 充值或换 key 之前每次请求都必然失败，照发只会刷日志、白跑网络，应该暂停一段时间。
+    /// 限流（429）、参数错误（400）、服务端错误（5xx）和超时是临时的，不在此列，照常按失败处理。
+    pub fn is_account_failure(&self) -> bool {
+        let Self::Api(error) = self else {
+            return false;
+        };
+        let async_openai::error::OpenAIError::ApiError(response) = error else {
+            return false;
+        };
+        matches!(response.status_code.as_u16(), 401 | 402 | 403)
+    }
+}

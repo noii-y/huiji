@@ -7,6 +7,7 @@ use qingjian_core::{FilledGloss, Language};
 use super::prompt;
 use crate::chat_client::ChatClient;
 use crate::error::PredictError;
+use crate::suspension::Suspension;
 
 /// 收到第一个词后最多等这么久再发，攒同一批。
 pub const BATCH_WAIT: Duration = Duration::from_millis(1500);
@@ -30,6 +31,9 @@ pub struct GlossWorker {
 
     /// 本进程内问过的 (语言, 词)，不再问。
     asked: HashSet<(Language, String)>,
+
+    /// 账户失败（密钥无效 / 欠费 / 被拒）后的暂停：暂停期间不再发释义请求。
+    suspension: Suspension,
 }
 
 impl GlossWorker {
@@ -43,6 +47,7 @@ impl GlossWorker {
             responses,
             client,
             asked: HashSet::new(),
+            suspension: Suspension::default(),
         }
     }
 
@@ -96,8 +101,12 @@ impl GlossWorker {
         }
     }
 
-    fn ask(&self, runtime: &tokio::runtime::Runtime, language: Language, words: Vec<String>) {
+    fn ask(&mut self, runtime: &tokio::runtime::Runtime, language: Language, words: Vec<String>) {
         if words.is_empty() {
+            return;
+        }
+        // 账户失败暂停期：不发新网络请求，词的释义先留空（不影响打字）。
+        if self.suspension.active(Instant::now()) {
             return;
         }
         let start = Instant::now();
@@ -121,7 +130,10 @@ impl GlossWorker {
                 }
             }
             Err(error) => {
-                tracing::warn!(language = language.code(), asked = words.len(), %error, "释义兜底失败");
+                // 密钥无效 / 欠费 / 被拒：暂停，record 内部已记一条；普通失败才补 warn。
+                if !self.suspension.record(&error, Instant::now(), "释义兜底") {
+                    tracing::warn!(language = language.code(), asked = words.len(), %error, "释义兜底失败");
+                }
             }
         }
     }

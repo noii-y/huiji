@@ -26,6 +26,7 @@ mod gloss;
 ))]
 mod local_translator;
 mod prompt;
+mod suspension;
 mod terminology;
 mod worker;
 
