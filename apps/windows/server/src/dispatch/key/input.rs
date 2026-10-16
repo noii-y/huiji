@@ -327,7 +327,11 @@ impl Router {
                 return Effect::Changed(None);
             }
         }
-        if let Some(step) = codes::page_key(event, self.config.page_keys) {
+        // `-` `=` 翻到页边翻不动时落回原字符（进英文直输段），不白吃键；`[` `]` `,` `.`
+        // 作翻页键时翻不动照旧吃键，否则会往文档里插标点。
+        if let Some(step) = codes::page_key(event, self.config.page_keys)
+            && (!matches!(c, '-' | '=') || self.can_page(step))
+        {
             self.page(step);
             return Effect::Navigated;
         }

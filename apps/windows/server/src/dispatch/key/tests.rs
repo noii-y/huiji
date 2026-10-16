@@ -242,3 +242,39 @@ fn tab_still_pages_without_cloud_sentence() {
     assert_eq!(result.2.page, 1);
     assert!(!result.2.sentence_selected);
 }
+
+/// 中文组句里 `-` `=` 翻到页边翻不动时落回原字符进直输段，不白吃键；`[` `]` 翻不动照旧吃键。
+#[test]
+fn chinese_minus_equals_fall_back_to_characters_at_page_edges() {
+    let normal = KeyModifiers::default();
+
+    // 第一页没有上一页：`-` 不再被吞，作为字符进直输段。
+    let mut r = router(4);
+    r.config.page_keys = ('-', '=');
+    compose(&mut r, "qq", normal);
+    let result = key(&mut r, 0xBD, Some('-'), normal);
+    assert_eq!(result.0, KeyOutcome::Consumed);
+    assert_eq!(r.engine.composition().text(), "qq-");
+
+    // 翻到最后一页再按 `=` 翻不动，`=` 落回原字符；往回翻有页时照常翻。
+    let mut r = router(4);
+    r.config.page_keys = ('-', '=');
+    compose(&mut r, "qq", normal);
+    assert_eq!(key(&mut r, 0xBB, Some('='), normal).2.page, 1);
+    assert_eq!(key(&mut r, 0xBB, Some('='), normal).2.page, 2);
+    assert_eq!(key(&mut r, 0xBD, Some('-'), normal).2.page, 1);
+    key(&mut r, 0xBB, Some('='), normal);
+    key(&mut r, 0xBB, Some('='), normal);
+    assert_eq!(r.engine.composition().text(), "qq=");
+
+    // 用 `[` `]` 作翻页键时，第一页翻不动照旧吃键（落字符会往文档里插标点）。
+    let mut r = router(4);
+    r.config.page_keys = ('[', ']');
+    compose(&mut r, "qq", normal);
+    let result = key(&mut r, 0xDB, Some('['), normal);
+    assert_eq!(
+        (result.0, result.1, result.2.page),
+        (KeyOutcome::Consumed, None, 0)
+    );
+    assert_eq!(r.engine.composition().text(), "qq");
+}
