@@ -356,6 +356,10 @@ impl TextService_Impl {
     /// - Consumed（注音音节键等）：缓存结果，返回 `Some(true)`，`OnKeyDown` 再应用；
     /// - 不是这类键，或重连 / 重启 / 读选区等非文档结果：返回 `None`，走普通按键路径。
     fn preflight_digit(&self, pic: &Ref<ITfContext>, event: KeyEvent) -> Option<bool> {
+        if event.modifiers.english_mode {
+            // 英文模式直通，数字不问 Server，统一交给 eats_key 放行。
+            return None;
+        }
         if self.shared.composing() || self.shared.translating() {
             return None;
         }
@@ -420,6 +424,7 @@ fn passthrough_digit_to_app(c: char, commit: Option<&str>) -> bool {
 /// 这个键吃不吃（[`TextService_Impl::would_eat`] 的纯逻辑，便于单测）。
 ///
 /// - 翻译评审中一律吃，交给 Server 定接受 / 取消；
+/// - 英文模式（Ctrl+空格切到「英」）一律不吃，键盘直通，按键原样进应用，不进输入框；
 /// - 带 Ctrl / Alt / Win：只有组句中的「修饰键 + 数字」吃（译词 / 删候选），其余归应用（翻译选中文字走保留键）；
 /// - 字母只有「中文模式、没在组句、按住 Shift 的大写」归应用，其中 V / U / I 仍吃：双拼下是表达式 / 问字入口。
 ///   `[general] shift_letter = "compose"`（Server 经 [`InputSettings`](qingjian_platform::protocol::InputSettings) 下发）时这种大写也吃：送去 Core 起一段组句，
@@ -436,13 +441,17 @@ fn eats_key(
         return true;
     }
     let modifiers = event.modifiers;
+    // 英文模式（Ctrl+空格 / 语言栏切到「英」）等同键盘直通：字母、数字、标点、编辑键、组合键
+    // 一律交还应用，不进输入框、不送 Server、不给英文补全。中英切换键本身不经过这里。
+    if modifiers.english_mode {
+        return false;
+    }
     if modifiers.has_command_key() {
         return composing && digit_key(event.virtual_key);
     }
     let vk = event.virtual_key;
     if is_letter(vk) {
         return modifiers.caps
-            || modifiers.english_mode
             || !modifiers.shift
             || composing
             || shift_letter_compose
@@ -556,6 +565,34 @@ mod tests {
         assert!(eats_without_server(&key(0x41, caps, english))); // A
         assert!(!eats_without_server(&key(0x41, true, english))); // Caps 亮着是直通英文
         assert!(!eats_without_server(&key(0x41, caps, true))); // 英文模式
+    }
+
+    #[test]
+    fn english_mode_passes_every_key_through() {
+        // 英文模式：键盘直通，所有键都不送输入法、不进输入框
+        let english = KeyModifiers {
+            english_mode: true,
+            ..KeyModifiers::default()
+        };
+        assert!(!eats_key(&with_modifiers(0x41, 'a', english), false, false, false)); // 字母
+        assert!(!eats_key(&with_modifiers(0x32, '2', english), false, false, false)); // 数字
+        assert!(!eats_key(&with_modifiers(0xBD, '-', english), false, false, false)); // 标点
+        // 带 Ctrl 的组合键也归应用
+        let combo = KeyModifiers {
+            english_mode: true,
+            ctrl: true,
+            ..KeyModifiers::default()
+        };
+        assert!(!eats_key(&with_modifiers(0x43, 'c', combo), false, false, false));
+        // 即便有残留的组句标记，英文模式也直通，不碰组句
+        assert!(!eats_key(&with_modifiers(0x41, 'a', english), true, false, false));
+        // 中文模式不受影响：小写字母照样吃
+        assert!(eats_key(
+            &with_modifiers(0x41, 'a', KeyModifiers::default()),
+            false,
+            false,
+            false
+        ));
     }
 
     #[test]
