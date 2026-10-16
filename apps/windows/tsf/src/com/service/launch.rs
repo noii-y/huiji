@@ -54,26 +54,37 @@ const MEDIUM_INTEGRITY_RID: u32 = 0x2000;
 /// 上次尝试拉起的时间；本进程内所有文本服务实例共用。
 static LAST_LAUNCH: Mutex<Option<Instant>> = Mutex::new(None);
 
-/// 连不上 Server 时拉起它。已请求启动返回 `true`（下一键就该连上），没试 / 失败返回 `false`。
-pub(super) fn launch_server() -> bool {
+/// 拉起 Server 的结果：决定按键在 Server 就绪前是继续吞拼音、还是原样放行。
+pub(super) enum LaunchOutcome {
+    /// 已请求启动一个新 Server，一百多毫秒后该监听管道。
+    Requested,
+    /// 冷却未到 / 别的进程正在拉起：不用重复起，等它就绪即可。
+    InFlight,
+    /// 这个宿主里起不出 Server（非普通桌面进程、登录界面 / 商店应用、安装中、找不到 exe、启动失败）：
+    /// 短期不会有 Server，按键应原样放行，不能吞成死键盘。
+    Refused,
+}
+
+/// 连不上 Server 时拉起它。
+pub(super) fn launch_server() -> LaunchOutcome {
     if !cooldown_passed() {
-        return false;
+        return LaunchOutcome::InFlight;
     }
     if !host_is_plain_desktop_app() {
         log("宿主进程不是普通桌面应用（完整性级别非 Medium），不拉起 Server");
-        return false;
+        return LaunchOutcome::Refused;
     }
     if installer_running() {
         log("安装程序正在运行，不拉起 Server");
-        return false;
+        return LaunchOutcome::Refused;
     }
     let Some(exe) = server_exe() else {
         log("找不到与 DLL 同目录的 qingjian-server.exe，不拉起");
-        return false;
+        return LaunchOutcome::Refused;
     };
     let Some(_mutex) = launch_mutex() else {
-        // 别的进程正在起：不重复起，退回退避重连
-        return false;
+        // 别的进程正在起：不重复起，等它就绪即可
+        return LaunchOutcome::InFlight;
     };
     let file = HSTRING::from(exe.as_os_str());
     let workdir = exe
@@ -94,24 +105,24 @@ pub(super) fn launch_server() -> bool {
     // ShellExecuteW 返回值 > 32 才算成功。
     if (code.0 as isize) > 32 {
         log("已请求启动 qingjian-server");
-        true
+        LaunchOutcome::Requested
     } else {
         log(&format!(
             "启动 qingjian-server 失败，返回值 {}",
             code.0 as isize
         ));
-        false
+        LaunchOutcome::Refused
     }
 }
 
-/// Server 无响应（请求超时）时重启它：结束旧进程，再拉起新的。返回新 Server 是否请求启动。
+/// Server 无响应（请求超时）时重启它：结束旧进程，再拉起新的。返回是否真的请求启动了新 Server。
 pub(super) fn restart_server() -> bool {
     kill_server();
     // 清掉本进程的拉起冷却，让下面立即能起新的（超时往往紧挨着一次连接失败，冷却还在）。
     if let Ok(mut last) = LAST_LAUNCH.lock() {
         *last = None;
     }
-    launch_server()
+    matches!(launch_server(), LaunchOutcome::Requested)
 }
 
 /// 结束本会话的 qingjian-server 进程。同用户、同完整性，taskkill 无需提权。用 `SESSION eq` 过滤，

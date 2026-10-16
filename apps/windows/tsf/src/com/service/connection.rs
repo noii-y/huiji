@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use super::launch;
+use super::launch::{self, LaunchOutcome};
 use super::{RECONNECT_INTERVAL, TextService_Impl};
 use crate::client::EngineClient;
 use crate::client::pipe::connect_default;
@@ -24,6 +24,7 @@ impl TextService_Impl {
             Ok((client, input)) => {
                 *self.engine.borrow_mut() = Some(client);
                 self.last_connect_failure.set(None);
+                self.launch_refused_at.set(None);
                 log("已连上 Server");
                 // 按键行为设置随 `OpenSession` 的回包一起下来（DLL 不读配置文件，AppContainer 里读不到）。
                 self.apply_input_settings(input);
@@ -46,10 +47,26 @@ impl TextService_Impl {
         self.last_connect_failure.set(Some(Instant::now()));
         // Server 只在登录时由「启动」文件夹拉起，中途挂了以前只能等下次登录；
         // 这里自己起一次（进程内冷却 + 跨进程互斥体，不会砸出一串 Server）。
-        if launch::launch_server() {
-            // 不等 RECONNECT_INTERVAL：Server 一百多毫秒就监听管道，下一键就该连上
-            self.last_connect_failure.set(None);
+        match launch::launch_server() {
+            LaunchOutcome::Requested | LaunchOutcome::InFlight => {
+                // 不等 RECONNECT_INTERVAL：Server 一百多毫秒就监听管道，下一键就该连上。
+                self.last_connect_failure.set(None);
+                self.launch_refused_at.set(None);
+            }
+            LaunchOutcome::Refused => {
+                // 这个宿主起不出 Server（提权进程 / 登录界面 / 安装中 / 找不到 exe）：
+                // 保持退避并记下拒绝时刻，按键兜底直接放行，别在这些地方吞成死键盘。
+                self.launch_refused_at.set(Some(Instant::now()));
+            }
         }
+    }
+
+    /// 最近是否刚确认「这个宿主拉不起 Server」（一个退避周期内）。
+    /// 为真时不在按键路径上阻塞等待、也不吞拼音，由调用方把键原样交给应用。
+    pub(super) fn launch_blocked(&self) -> bool {
+        self.launch_refused_at
+            .get()
+            .is_some_and(|at| at.elapsed() < RECONNECT_INTERVAL)
     }
 
     /// 没连上就重连一次（距上次失败不到 [`RECONNECT_INTERVAL`] 则跳过）。返回此刻是否连着。
@@ -86,6 +103,11 @@ impl TextService_Impl {
         // 先按正常路径尝试 + 触发拉起（受退避 / 冷却约束，最多起一个 Server）。
         if self.engine.borrow().is_none() {
             self.ensure_connected();
+        }
+        // 宿主根本拉不起 Server（提权进程 / 登录界面 / 商店应用 / 安装中 / 找不到 exe）：
+        // 不在 UI 线程上阻塞等待，立即返回让按键放行，否则这里会表现为整片死键盘。
+        if self.launch_blocked() {
+            return false;
         }
         let deadline = Instant::now() + timeout;
         while self.engine.borrow().is_none() && Instant::now() < deadline {

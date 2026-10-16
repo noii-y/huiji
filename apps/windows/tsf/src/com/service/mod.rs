@@ -99,6 +99,14 @@ pub struct TextService {
 
     /// 激活后一小段时间内忽略转换模式 compartment 的变化，见 [`TextService_Impl::sync_from_conversion_mode`]。
     conversion_guard_until: Cell<Option<Instant>>,
+
+    /// `OnTestKeyDown` 已问过 Server 的数字键结果；`OnKeyDown` 取走应用，避免再送一次。
+    /// 只有要 Consumed 的数字（注音音节键等）进这里；Passthrough 的数字在 Test 里直接放行、不缓存。
+    pending_digit: RefCell<Option<next::Next>>,
+
+    /// 上次确认「这个宿主拉不起 Server」（提权进程 / 登录界面 / 安装中 / 找不到 exe）的时刻；
+    /// 一个退避周期内不阻塞等待、也不吞拼音，字母原样放行，见 [`crate::com::service::connection`]。
+    launch_refused_at: Cell<Option<Instant>>,
 }
 
 thread_local! {
@@ -183,6 +191,8 @@ impl TextService {
             input_settings: Cell::new(None),
             indicator_state: Cell::new(IndicatorState::default()),
             conversion_guard_until: Cell::new(None),
+            pending_digit: RefCell::new(None),
+            launch_refused_at: Cell::new(None),
         }
     }
 }
