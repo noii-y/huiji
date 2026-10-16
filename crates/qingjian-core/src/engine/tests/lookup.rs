@@ -480,3 +480,30 @@ fn rare_reading_stays_behind_even_with_high_personal_weight() {
     engine.set_input("hu");
     assert_eq!(texts_of(&engine)[0], "胡");
 }
+
+#[test]
+fn segmentation_competition_prefers_word_but_respects_boundaries() {
+    // 贪心切分 hen-an、ren-ao 用的是极高频单字（很/人），同音节数另有 he-nan、re-nao
+    // 能组常用词（河南/热闹）。词频照真实量级（单字高、整词中），验证跨切分让整词赢。
+    let dict = Dictionary::parse(
+        "很\then\t861789\n暗\tan\t5646\n河南\the nan\t22131\n\
+         人\tren\t1060110\n奥\tao\t65857\n热闹\tre nao\t4761\n\
+         河南人\the nan ren\t20000\n先\txian\t10000\n西安\txi an\t4000\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dict);
+    let mut top = |input: &str| {
+        engine.set_input(input);
+        engine.query().unwrap().candidates.items[0].text.clone()
+    };
+    assert_eq!(top("henan"), "河南");
+    assert_eq!(top("renao"), "热闹");
+    assert_eq!(top("henanren"), "河南人");
+    // 撇号是用户明确指定的切分，照给：hen'an 是很暗、ren'ao 是人奥，he'nan 才是河南
+    assert_eq!(top("hen'an"), "很暗");
+    assert_eq!(top("ren'ao"), "人奥");
+    assert_eq!(top("he'nan"), "河南");
+    // 音节数不同的切分不竞争：xian 一个音节给「先」，xi'an 两个音节才是「西安」
+    assert_eq!(top("xian"), "先");
+    assert_eq!(top("xi'an"), "西安");
+}

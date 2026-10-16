@@ -63,6 +63,35 @@ impl Engine {
                         plain,
                     );
                 }
+                // 跨切分竞争：只处理「覆盖整段的词库整词（一个词）被贪心切分的单字硬凑整句压过」
+                // 这一类（henan 的 贪心 hen-an→很暗 Sentence，输给 he-nan→河南）。单音节、
+                // 首选本就是词级整词的（kaifaxian 的 开发线/开发先 按词频排）都不碰，避免误伤。
+                if best.syllables.len() >= 2
+                    && let Some(cross) = self.best_segmentation_sentence(segmentations, typos)
+                    && cross.word_count() == 1
+                    && items
+                        .get(position)
+                        .is_some_and(|c| c.kind == CandidateKind::Sentence)
+                {
+                    if let Some(idx) = items.iter().position(|c| c.text == cross.text) {
+                        if idx > position {
+                            let existing = items.remove(idx);
+                            items.insert(position, existing);
+                        }
+                    } else {
+                        items.insert(
+                            position,
+                            Candidate {
+                                text: cross.text,
+                                kind: CandidateKind::Chinese,
+                                syllables: cross.syllables,
+                                reading: None,
+                                translation: None,
+                                aux_code: None,
+                            },
+                        );
+                    }
+                }
             }
         }
     }
@@ -226,5 +255,46 @@ impl Engine {
             self.rescore_paths(&mut paths, &keys);
         }
         paths
+    }
+
+    /// 在「音节数、完整度都与首选切分相同」的多个切分之间各跑一次整句转换，取路径分最高的一条。
+    ///
+    /// parser 只按字母贪心在同音节数的歧义切分间排序：`henan` 里 hen-an 因为第一个音节更长排第一，
+    /// he-nan 排第二。但哪种切分能成话该由语言模型决定，he-nan 能组出高频地名「河南」，不能因为
+    /// hen 比 he 多一个字母就让「很暗」抢首。这里把同音节数的切分都送进词图公平竞争一次。
+    ///
+    /// 音节数不同的切分不参与：parser 的「音节少优先」是有意的（打 xian 通常是「先」不是「西安」），
+    /// 跨音节数竞争会把大量单音节正确读法挤掉。只收完整转写、没走模糊音/敲错边的路径，跨切分只解决
+    /// 纯切分歧义，手误纠错的原样词保护仍由首选切分那条路径负责。
+    pub(in crate::engine) fn best_segmentation_sentence(
+        &self,
+        segmentations: &[Segmentation],
+        typos: bool,
+    ) -> Option<Conversion> {
+        let head = segmentations.first()?;
+        // 只对完整全拼串做跨切分竞争。带缩写声母（`sy`）或没打完的音节（`zho`）时，每个声母
+        // 对应几十个候选，纯靠静态 bigram 竞争会把「使用」错换成「所以」——那是简拼展开的地盘，
+        // 交给原有排序。henan/renao 这类完整全拼的边界歧义才是这里要修的。
+        if head.incomplete_count() != 0 {
+            return None;
+        }
+        let want_len = head.syllables.len();
+        let want_incomplete = head.incomplete_count();
+        let mut best: Option<Conversion> = None;
+        for seg in segmentations {
+            if seg.syllables.len() != want_len || seg.incomplete_count() != want_incomplete {
+                continue;
+            }
+            let Some(conv) = self.convert_sentence(&seg.patterns(), typos) else {
+                continue;
+            };
+            if conv.has_placeholder() || conv.altered() {
+                continue;
+            }
+            if best.as_ref().is_none_or(|b| conv.score > b.score) {
+                best = Some(conv);
+            }
+        }
+        best
     }
 }

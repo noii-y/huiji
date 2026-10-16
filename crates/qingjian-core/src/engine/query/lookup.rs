@@ -48,6 +48,11 @@ impl Engine {
 
     /// 本地整句转换把最优切分转成的汉字，给云端当参考（问字模式里就是问题的汉字形式）；转不出或有占位音节为空。
     pub(in crate::engine) fn local_guess(&self, segmentations: &[Segmentation]) -> String {
+        // 先让同音节数的切分公平竞争（henan 该给河南而不是很暗）；
+        // 用户有敲错时各切分都带纠错代价，竞争会落空，再回退首选切分的原样/纠错结果。
+        if let Some(cross) = self.best_segmentation_sentence(segmentations, true) {
+            return cross.text;
+        }
         segmentations
             .first()
             .and_then(|best| self.convert_sentence(&best.patterns(), true))

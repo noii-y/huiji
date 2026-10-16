@@ -414,7 +414,9 @@ impl Engine {
             (None, Some(c)) => self.convert_sentence(&c.segmentation.patterns(), false)?,
             (None, None) => {
                 let (segmentations, _) = segment_longest_prefix(scope).ok()?;
-                self.convert_sentence(&segmentations.first()?.patterns(), true)?
+                // 与候选首选同源：跨切分竞争（henan→河南）先试，带缩写/敲错或竞争落空时回退首选切分。
+                self.best_segmentation_sentence(&segmentations, true)
+                    .or_else(|| self.convert_sentence(&segmentations.first()?.patterns(), true))?
             }
         };
         (conversion.text == candidate.text).then_some(conversion.words)
