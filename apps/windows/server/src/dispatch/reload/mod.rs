@@ -327,7 +327,6 @@ impl Router {
             self.candidates.configure(settings);
         }
         self.reconcile_status();
-        self.apply_model_config(&config.model);
 
         let Some(reload) = &mut self.reload else {
             return;

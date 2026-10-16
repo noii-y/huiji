@@ -1,4 +1,4 @@
-//! 「云服务」页：本地整句模型开关（`[model]`）、`[predict]` 各项与「测试连接」（后台线程跑）。
+//! 「云服务」页：`[predict]` 各项与「测试连接」（后台线程跑）。
 
 use qingjian_predict::{ConnectionTest, PredictConfig};
 use windows_reactor::*;
@@ -41,13 +41,6 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         CloudStatus::Failed(message) => format!("失败：{message}"),
     };
     let rows = [
-        field(
-            "本地整句模型",
-            "本机神经模型给整句候选重新排序，全程离线。默认不附带该模型，需自行放入数据目录才生效，否则开关无作用；关闭后只用词库统计。",
-            ToggleSwitch::new()
-                .is_on(settings.config.model.enabled)
-                .on_toggled(context.callback(Message::LocalModel)),
-        ),
         field(
             "启用云端纠错",
             "开启后组句时会把光标附近的几十个字发给下面的服务，让模型把打错、打漏的拼音还原成你本来想写的中文，只纠错、不扩写不续写；密钥框里的内容不发送。",

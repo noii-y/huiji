@@ -259,8 +259,6 @@ fn main() {
     dispatch::attach_predictors(&mut engine, &config.predict, user_dir().as_deref(), &root);
     let router_config = RouterConfig::from(&config);
     let mut router = Router::new(engine, router_config.clone());
-    let model_path = dispatch::find_model(user_dir().as_deref(), &root);
-    router.configure_local_model(model_path.clone(), &config.model);
     router.configure_code_table(dispatch::find_code_table(user_dir().as_deref(), &root));
     if let Some(path) = config_path() {
         let user = user_dir();
@@ -288,8 +286,6 @@ fn main() {
         scheme = %if config.general.scheme_label().is_empty() { "全拼".to_owned() } else { config.general.scheme_label() },
         fuzzy = config.fuzzy.any(),
         cloud = config.predict.enabled,
-        model = model_path.as_deref().map(|p| p.display().to_string()).unwrap_or_default(),
-        model_enabled = config.model.enabled,
         sessions = router.session_count(),
         "灰迹 Windows Server 就绪"
     );

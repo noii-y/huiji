@@ -1,68 +1,22 @@
-//! 本地整句模型（与 macOS 壳的 `host/model.rs` 对齐）：后台加载、停键后请求重排、结果到了重画当前页。
+//! 光标前文与重排调度（本地神经整句模型已在灰迹中移除）：
 //!
-//! 按键回调里永远只跑词级模型；模型的意见在停键 80 毫秒后请求、几十毫秒后到，只换候选窗口里的整句候选，
-//! 用户翻过页或动过高亮就不打扰。前文优先用应用里光标前的文字（DLL 起组句时随 `ClientMessage::Surrounding` 送来），没有退回本会话历史。
+//! 灰迹不挂本地整句 scorer，长句纠错与翻译交给云端；这里保留调度框架，在没有 scorer 时全部空转，
+//! 仍在工作的是 [`Router::set_surrounding`]：把 DLL 送来的光标前文交给云联想（`before`）。
 //! 节拍由工人循环驱动：[`Router::next_tick`] 说下次多久来一次 [`Router::tick`]；DLL 组句期间每 80 ms 的 `Poll` 也顺带 tick。
-//! 加载在 [`loader`]，进行态在 [`state`]。
+//! 进行态在 [`state`]。
 
 mod state;
 
-use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use qingjian_core::CandidateLayout;
-use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::SessionId;
 
 pub(crate) use self::state::RescoreState;
 use super::Router;
 use super::composed::{Composed, marked_parts};
 
-/// 灰迹不加载本地神经整句模型：长句纠错与翻译交给云端，离线只保留 opus-mt 词级翻译兜底。
-/// 保留这个函数签名（启动时调用）固定返回空，省掉找权重文件的磁盘扫描。
-pub fn find_model(_user_dir: Option<&Path>, _bundled_root: &Path) -> Option<PathBuf> {
-    None
-}
-
 impl Router {
-    /// 启动时：记下模型文件，按 `[model] enabled` 决定要不要加载。
-    pub fn configure_local_model(
-        &mut self,
-        model_path: Option<PathBuf>,
-        config: &LocalModelConfig,
-    ) {
-        self.model_path = model_path;
-        self.applied_model = config.clone();
-        if config.enabled {
-            self.load_local_model();
-        }
-    }
-
-    /// 热加载：`[model]` 变了才重载 / 卸载。
-    pub(super) fn apply_model_config(&mut self, config: &LocalModelConfig) {
-        if *config == self.applied_model {
-            return;
-        }
-        self.applied_model = config.clone();
-        if config.enabled {
-            self.load_local_model();
-        } else {
-            self.unload_local_model();
-        }
-    }
-
-    /// 灰迹不加载本地神经整句模型：即便设置里 `[model] enabled = true` 也不加载，长句纠错交给云端。
-    fn load_local_model(&mut self) {
-        self.engine.set_async_sentence_scorer(None);
-        self.rescore.stop();
-    }
-
-    /// 卸掉模型（配置关掉）。
-    fn unload_local_model(&mut self) {
-        self.engine.set_async_sentence_scorer(None);
-        self.rescore.stop();
-    }
-
     /// 组句结束：什么都不等了；应用前文也作废（下一段组句 DLL 会再送）。
     pub(super) fn stop_rescoring(&mut self) {
         self.rescore.stop();

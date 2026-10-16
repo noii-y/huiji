@@ -20,7 +20,6 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use qingjian_core::Engine;
-use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::{
     ClientMessage, Frame, IndicatorState, InputSettings, ScreenRect, ServerMessage, SessionId,
 };
@@ -31,7 +30,6 @@ use self::composed::Composed;
 pub use self::config::RouterConfig;
 use self::reload::ConfigReload;
 pub use self::reload::{DataDirs, attach_predictors};
-pub use self::rescore::find_model;
 use self::rescore::RescoreState;
 use self::session::SessionInfo;
 pub use self::status::{NoopStatusSink, StatusEvent, StatusSink, StatusView};
@@ -113,14 +111,8 @@ pub struct Router {
     /// 上次真正显示的帧与位置：没变就不重画（组字期间的空转 Poll 很多）。
     last_shown: Option<(Frame, ScreenRect)>,
 
-    /// 本地整句模型（`.qjm` 或三件套目录）；没有模型文件为 `None`。
-    model_path: Option<PathBuf>,
-
     /// 形码码表（`wubi/wubi86.tsv`，启动时找好的，见 [`code::find_code_table`]）；没有为 `None`。
     code_table: Option<PathBuf>,
-
-    /// 上次套用的 `[model]`，变了才重载 / 卸载。
-    applied_model: LocalModelConfig,
 
     /// DLL 报来的聚焦会话光标前文：云联想按它带 `before` 上下文。TSF 只读光标前文，
     /// `after` 恒为空；组句结束 / 焦点切换即作废（下一段组句 DLL 会再送）。
@@ -159,9 +151,7 @@ impl Router {
             ime_active: false,
             last_rect: None,
             last_shown: None,
-            model_path: None,
             code_table: None,
-            applied_model: LocalModelConfig::default(),
             surrounding_before: String::new(),
             rescore: RescoreState::default(),
         }

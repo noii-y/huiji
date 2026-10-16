@@ -37,7 +37,6 @@ pub(crate) enum Message {
     StatusBar(bool),
 
     // 云服务页
-    LocalModel(bool),
     CloudEnabled(bool),
     CloudApiKey(String),
     CloudModel(String),

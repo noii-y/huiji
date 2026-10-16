@@ -6,7 +6,6 @@ mod general;
 mod key_combo;
 mod layout_mode;
 mod log_level;
-mod model;
 mod modifiers;
 mod preedit_mode;
 mod scheme;
@@ -41,7 +40,6 @@ pub use general::{
 pub use key_combo::KeyCombo;
 pub use layout_mode::LayoutMode;
 pub use log_level::LogLevel;
-pub use model::LocalModelConfig;
 pub use modifiers::Modifiers;
 pub use preedit_mode::PreeditMode;
 pub use scheme::{Scheme, scheme_label};
@@ -85,9 +83,6 @@ pub struct Config {
 
     /// 悬浮状态条（桌面上常驻、可拖动的中 / 英浮窗）。
     pub status_bar: StatusBarConfig,
-
-    /// 本地整句模型。
-    pub model: LocalModelConfig,
 
     /// 检查更新。
     pub update: UpdateConfig,
@@ -308,10 +303,6 @@ enabled = false
 # 辅码码表：放在配置同目录 codes/ 下的 .qj 文件都会加载，这里列出要关掉的（文件名，不含扩展名）
 # 随包的笔画表也可以在这里关掉；码表由「辅码」设置页导入，或放好文件后在这里管
 disabled = []
-
-[model]
-# 本地整句模型：本机神经模型给整句候选重新排序，全程离线。默认不附带该模型，需自行放入数据目录才生效，否则无作用；关闭后只用词库统计
-enabled = true
 
 [predict]
 # 云端纠错：把光标附近的文本发到下面的接口，让模型把打错、打漏的拼音还原成本来想写的中文，只纠错、不扩写。默认关闭。
@@ -564,6 +555,14 @@ mod tests {
         assert_eq!(config.predict.model, "deepseek-flash");
         assert_eq!(config.predict.reasoning_effort, "none");
         assert_eq!(config.predict.api_key_env, "QINGJIAN_API_KEY");
+    }
+
+    #[test]
+    fn legacy_model_section_is_ignored() {
+        // 旧版本（含本地神经模型）配置里残留 [model] 段，升级后应被忽略而不是解析失败
+        let config: Config =
+            toml::from_str("[model]\nenabled = true\n[predict]\nenabled = true\n").unwrap();
+        assert!(config.predict.enabled);
     }
 
     #[test]
