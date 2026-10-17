@@ -101,6 +101,7 @@ impl AuxCodeTable {
 
     /// 从 TSV 解析：每行 `词\t码`，`#` 开头为注释，空行忽略；同一个词可以有多行。
     pub fn parse(source: &str) -> Result<Self, DictionaryError> {
+        let source = crate::strip_utf8_bom(source);
         let mut pairs = Vec::new();
         for (index, raw) in source.lines().enumerate() {
             let line = raw.trim();
@@ -146,6 +147,7 @@ impl AuxCodeTable {
     /// 解析码表文本：有 YAML 头（`---` 或 `name:` 打头）的按 Rime 规则读——与「导入码表」走同一套
     /// 解析（`columns` / `import_tables` / 「有词无码」统计口径一致），其余按 `词\t码` 的 TSV 读。
     pub fn from_text(text: &str) -> Result<Self, DictionaryError> {
+        let text = crate::strip_utf8_bom(text);
         if !looks_like_rime(text) {
             return Self::parse(text);
         }

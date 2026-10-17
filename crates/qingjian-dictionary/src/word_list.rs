@@ -16,6 +16,7 @@ pub struct WordList {
 
 impl WordList {
     pub fn parse(source: &str) -> Result<Self, DictionaryError> {
+        let source = crate::strip_utf8_bom(source);
         let mut by_code: HashMap<String, usize> = HashMap::new();
         let mut entries: Vec<(String, String, u32)> = Vec::new();
         for (index, raw) in source.lines().enumerate() {

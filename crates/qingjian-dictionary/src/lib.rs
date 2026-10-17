@@ -24,6 +24,15 @@ mod matching;
 mod pattern;
 mod word_list;
 
+/// 剥掉文本开头的 UTF-8 BOM（U+FEFF）。
+///
+/// `std::fs::read_to_string` 不解码 BOM，带 BOM 的文件首行会被当成 `U+FEFF+词` 入库。
+/// BOM 只可能出现在整个文件的第一个字符，所以在各解析入口剥一次即可；
+/// 不要逐行剥——正文里（罕见但合法）出现的同字符会被误伤。幂等，重复调用安全。
+pub(crate) fn strip_utf8_bom(text: &str) -> &str {
+    text.strip_prefix('﻿').unwrap_or(text)
+}
+
 pub use aux_code_table::{
     AuxCodeLookup, AuxCodeTable, AuxCodeTableImport, AuxCodeTableImportReport, AuxCodeTableInfo,
     aux_code_table_info, import_aux_code_table,

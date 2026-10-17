@@ -17,6 +17,50 @@ fn full_syllables_match_exact_and_longer_words() {
 }
 
 #[test]
+fn strips_leading_utf8_bom_so_first_word_is_clean() {
+    // 内存里直接喂带 BOM（U+FEFF）的 TSV：首行词不能带 BOM，且与无 BOM 行为一致
+    let mut with_bom = String::new();
+    with_bom.push('﻿');
+    with_bom.push_str("开发\tkai fa\t9000\n开放\tkai fang\t2000\n");
+    let dictionary = Dictionary::parse(&with_bom).unwrap();
+    let matches = dictionary.lookup(&["kai", "fa"], false);
+    assert_eq!(texts(&matches), ["开发"]);
+    assert_eq!(matches[0].text, "开发");
+    assert!(
+        dictionary.entries().all(|entry| !entry.text.starts_with('﻿')),
+        "词条里不应残留 BOM"
+    );
+    // 对照：不带 BOM 时词数与查询结果完全一致
+    let plain = Dictionary::parse("开发\tkai fa\t9000\n开放\tkai fang\t2000\n").unwrap();
+    assert_eq!(dictionary.len(), plain.len());
+    assert_eq!(
+        texts(&dictionary.lookup(&["kai"], false)),
+        texts(&plain.lookup(&["kai"], false))
+    );
+}
+
+#[test]
+fn strips_utf8_bom_when_reading_tsv_file_from_disk() {
+    // 磁盘上真实写出 EF BB BF 三字节（read_to_string 会把它解成文件首的 U+FEFF），
+    // 走 from_path → read_to_string → parse 全链路：首行「嗯」干净入库、查询不带 BOM
+    let dir = std::env::temp_dir().join("qingjian-dictionary-bom-tests");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join(format!("dict-{}.tsv", std::process::id()));
+    let body = "嗯\ten\t5000\n开发\tkai fa\t9000\n";
+    let bytes: Vec<u8> = [0xEF, 0xBB, 0xBF]
+        .into_iter()
+        .chain(body.as_bytes().iter().copied())
+        .collect();
+    std::fs::write(&path, &bytes).unwrap();
+    let dictionary = Dictionary::from_path(&path).unwrap();
+    std::fs::remove_file(&path).unwrap();
+    let matches = dictionary.lookup(&["en"], false);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].text, "嗯");
+    assert!(!matches[0].text.starts_with('﻿'));
+}
+
+#[test]
 fn exact_lookup_only_returns_words_of_the_same_length() {
     let dictionary = Dictionary::parse(SAMPLE).unwrap();
     let exact = dictionary.lookup_exact(&[

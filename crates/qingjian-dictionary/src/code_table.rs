@@ -45,6 +45,7 @@ pub struct CodeTable {
 
 impl CodeTable {
     pub fn parse(source: &str) -> Result<Self, DictionaryError> {
+        let source = crate::strip_utf8_bom(source);
         let mut entries: Vec<Entry> = Vec::new();
         for (index, raw) in source.lines().enumerate() {
             let line = raw.trim();

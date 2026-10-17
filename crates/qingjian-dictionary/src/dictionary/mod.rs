@@ -91,6 +91,7 @@ pub struct Dictionary {
 
 impl Dictionary {
     pub fn parse(source: &str) -> Result<Self, DictionaryError> {
+        let source = crate::strip_utf8_bom(source);
         let mut texts = String::new();
         let mut keys = String::new();
         let mut rows: Vec<Row> = Vec::new();

@@ -9,6 +9,7 @@ pub struct Parsed {
 
 /// 有 YAML 头，或第一条非注释行是 `name:` / `---` 就当 Rime 词库。
 pub fn looks_like_rime(text: &str) -> bool {
+    let text = crate::strip_utf8_bom(text);
     text.lines()
         .map(str::trim)
         .find(|l| !l.is_empty() && !l.starts_with('#'))
@@ -16,6 +17,7 @@ pub fn looks_like_rime(text: &str) -> bool {
 }
 
 pub fn to_tsv(text: &str) -> Parsed {
+    let text = crate::strip_utf8_bom(text);
     let mut tsv = String::with_capacity(text.len());
     let mut name = None;
     let mut in_header = false;

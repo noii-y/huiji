@@ -40,6 +40,7 @@ impl ParsedTable {
     /// 解析一份码表文本：`---` … `...` 是 YAML 头（`name` / `version` / `columns` / `import_tables`），
     /// 正文每行按 `columns` 的列位置取词与码。没有头、直接 `词\t码` 的纯文本也认（按缺省列序）。
     pub fn parse(text: &str) -> Self {
+        let text = crate::strip_utf8_bom(text);
         let mut parsed = Self::default();
         let mut names: Vec<String> = default_column_names();
         let mut in_header = false;

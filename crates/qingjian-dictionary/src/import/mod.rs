@@ -33,11 +33,12 @@ pub fn import(source: &Path, dest_dir: &Path) -> Result<Imported, DictionaryErro
         (dictionary, metadata)
     } else {
         let text = std::fs::read_to_string(source)?;
-        let (tsv, name) = if rime::looks_like_rime(&text) {
-            let parsed = rime::to_tsv(&text);
+        let text = crate::strip_utf8_bom(&text);
+        let (tsv, name) = if rime::looks_like_rime(text) {
+            let parsed = rime::to_tsv(text);
             (parsed.tsv, parsed.name)
         } else {
-            (text, None)
+            (text.to_owned(), None)
         };
         let dictionary = Dictionary::parse(&tsv)?;
         let metadata = Metadata {
