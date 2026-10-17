@@ -157,6 +157,13 @@ fn to_screen(rect: RECT) -> ScreenRect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // 两个用例共享进程级静态 `LAST_LINE_HEIGHT`，Rust 测试默认多线程并行会互相踩踏：
+    // 整行高用例把静态写成 20，超大矩形用例却断言它为 0，偶发误败。该静态是 TSF 跨按键
+    // 持久记忆，生产侧无法在不改函数签名的前提下注入局部态；故在测试模块内加一把进程级锁
+    // 串行化这两个用例（各自开头仍 store(0) 复位）。不动生产逻辑，也不新增 dev-dependency。
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn rect(top: i32, bottom: i32) -> RECT {
         RECT {
@@ -171,6 +178,7 @@ mod tests {
     // 摆放判定不再翻转。
     #[test]
     fn fragment_is_repaired_to_last_line_height() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         LAST_LINE_HEIGHT.store(0, Ordering::Relaxed);
         let mut orphan = rect(1063, 1064);
         assert!(!repair_degenerate(&mut orphan)); // 还没记过行高，照用残片
@@ -188,6 +196,7 @@ mod tests {
     // 整框矩形（整个编辑框那么高）不能当行高记，也不许被补。
     #[test]
     fn oversized_rect_is_neither_stored_nor_repaired() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         LAST_LINE_HEIGHT.store(0, Ordering::Relaxed);
         let mut whole = rect(0, 900);
         assert!(!repair_degenerate(&mut whole));
