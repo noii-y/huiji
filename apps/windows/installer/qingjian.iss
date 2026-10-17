@@ -163,6 +163,7 @@ Type: filesandordirs; Name: "{commonprograms}\青简"
 [UninstallDelete]
 ; 历次升级留下的旧版本 DLL（正常在升级时就删了；仍被占用的会留到这里）。
 Type: files; Name: "{app}\qingjian_tsf-*.dll"
+Type: files; Name: "{app}\qingjian_tsf-*.dll.old"
 Type: files; Name: "{app}\qingjian-server.old-*.exe"
 
 [Code]
@@ -285,6 +286,19 @@ begin
           if not DeleteFile(Path) then
             RestartReplace(Path, '');
         end;
+      until not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  end;
+  ; 手工残留的 qingjian_tsf-<版本>.dll.old（.old 是最终扩展名，上面 *.dll 通配不到；当前版本 DLL 以 .dll 结尾，不会误删）。
+  if FindFirst(Dir + '\qingjian_tsf*.dll.old', Found) then
+  begin
+    try
+      repeat
+        Path := Dir + '\' + Found.Name;
+        if not DeleteFile(Path) then
+          RestartReplace(Path, '');
       until not FindNext(Found);
     finally
       FindClose(Found);
