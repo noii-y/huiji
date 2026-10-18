@@ -78,6 +78,44 @@ function Ensure-CudaStubLibs {
     Write-Host "占位库已生成 → $LibDir" -ForegroundColor Green
 }
 
+# sentencepiece-sys（local-nmt-system 依赖）用 cmake 编译 C++ 源码，而 VS BuildTools 默认不装 CMake。
+# 找到 cmake 后固定用 Visual Studio 生成器：它自己定位 MSVC，不必先开 vcvars，也不会把 x64 的
+# INCLUDE/LIB 污染给后面的 32 位交叉编译。找不到时用 pip 装到用户目录（免管理员），保证干净机器可复现。
+function Ensure-CMake {
+    $found = (Get-Command cmake.exe -ErrorAction SilentlyContinue).Source
+    if (-not $found) {
+        $candidates = @()
+        foreach ($root in @((Join-Path $env:LOCALAPPDATA 'Programs\Python'), (Join-Path $env:APPDATA 'Python'))) {
+            if (Test-Path $root) {
+                $candidates += Get-ChildItem (Join-Path $root 'Python*\Scripts\cmake.exe') -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+            }
+        }
+        $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+        if (Test-Path $vswhere) {
+            $vsPath = & $vswhere -latest -products * -property installationPath
+            if ($vsPath) {
+                $vsCmake = Join-Path $vsPath 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
+                if (Test-Path $vsCmake) { $candidates += $vsCmake }
+            }
+        }
+        $found = $candidates | Where-Object { $_ } | Select-Object -First 1
+    }
+    if (-not $found) {
+        Write-Host '没找到 cmake（sentencepiece-sys 编译需要），尝试用 pip 安装到用户目录…' -ForegroundColor Cyan
+        $py = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
+        if (-not $py) { throw '缺 cmake 且没找到 Python：装 VS 的「C++ CMake 工具」组件，或先 `pip install cmake` 再重跑' }
+        & $py -m pip install --user cmake
+        if ($LASTEXITCODE -ne 0) { throw 'pip install cmake 失败：改装 VS 的「C++ CMake 工具」组件后重跑' }
+        $scriptsDir = & $py -c "import sysconfig; print(sysconfig.get_path('scripts', 'nt_user'))"
+        $found = Join-Path $scriptsDir 'cmake.exe'
+    }
+    if (-not $found -or -not (Test-Path $found)) { throw '仍找不到 cmake.exe：装 VS 的「C++ CMake 工具」组件，或 pip install cmake' }
+    $cmakeDir = Split-Path $found
+    if ($env:Path -notlike "*$cmakeDir*") { $env:Path = "$cmakeDir;$env:Path" }
+    $env:CMAKE_GENERATOR = 'Visual Studio 17 2022'
+    Write-Host "用 cmake：$found（生成器 Visual Studio 17 2022）" -ForegroundColor Green
+}
+
 # 1) 构建三个产物。
 if (-not $SkipBuild) {
     Write-Host '构建 release 产物…' -ForegroundColor Cyan
@@ -90,6 +128,7 @@ if (-not $SkipBuild) {
         if (-not (Test-Path (Join-Path $sdkLib 'ctranslate2.lib'))) { throw "端侧翻译 SDK 不在：$sdkLib" }
         Ensure-CudaStubLibs -LibDir $sdkLib
         $env:LIBRARY_PATH = $sdkLib
+        Ensure-CMake
         cargo build --release --locked -p qingjian-windows-server --features local-nmt-system
         if ($LASTEXITCODE -ne 0) { throw "Server cargo build 失败（退出码 $LASTEXITCODE）" }
         cargo build --release --locked -p qingjian-windows-tsf --target i686-pc-windows-msvc
