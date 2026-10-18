@@ -291,7 +291,7 @@ begin
       FindClose(Found);
     end;
   end;
-  ; 手工残留的 qingjian_tsf-<版本>.dll.old（.old 是最终扩展名，上面 *.dll 通配不到；当前版本 DLL 以 .dll 结尾，不会误删）。
+  // 手工残留的 qingjian_tsf-<版本>.dll.old（.old 是最终扩展名，上面 *.dll 通配不到；当前版本 DLL 以 .dll 结尾，不会误删）。
   if FindFirst(Dir + '\qingjian_tsf*.dll.old', Found) then
   begin
     try
