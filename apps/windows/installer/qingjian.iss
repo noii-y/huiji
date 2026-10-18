@@ -226,6 +226,36 @@ end;
 
 { 覆盖前先结束 Server 与设置程序（只有这两个 exe 要覆盖；DLL 按版本并排装，不用关应用）。
   没在跑时 taskkill 返回非 0，忽略。 }
+{ 0.2.0 起设置程序只带 en-us / zh-cn 两个语言资源；覆盖安装旧版（0.1.x 曾铺 80+ 个语言目录）时，
+  旧目录 Inno 不会主动删，需安装前清掉。删除安装根下所有含 xaml mui 的语言目录（含 az-latn-az 这类
+  带脚本标签的），只留 en-us / zh-cn；判断限定为"目录名含连字符、无点、且含 xaml mui"，不误伤
+  microsoft.ui.xaml 与 data/assets 等目录。随后 [Files] 会把 en-us / zh-cn 重新铺回来。 }
+procedure RemoveStaleLangDirs;
+var
+  Root: String;
+  Find: TFindRec;
+begin
+  Root := ExpandConstant('{app}');
+  if FindFirst(Root + '\*', Find) then
+  begin
+    try
+      repeat
+        if ((Find.Attributes AND $10) <> 0)
+           and (Pos('-', Find.Name) > 0)
+           and (Pos('.', Find.Name) = 0)
+           and (CompareText(Find.Name, 'en-us') <> 0)
+           and (CompareText(Find.Name, 'zh-cn') <> 0)
+           and FileExists(Root + '\' + Find.Name + '\Microsoft.ui.xaml.dll.mui') then
+        begin
+          DelTree(Root + '\' + Find.Name, True, True, True);
+        end;
+      until not FindNext(Find);
+    finally
+      FindClose(Find);
+    end;
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   RetireServerExe;
@@ -233,6 +263,7 @@ begin
   KillProcess('qingjian-settings.exe');
   RetireLoadedDll('{#TsfDll}');
   RetireLoadedDll('{#TsfDll32}');
+  RemoveStaleLangDirs;
   Result := '';
 end;
 
