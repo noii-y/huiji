@@ -24,21 +24,22 @@ impl EdgeKind {
     }
 }
 
+/// 一个位置的「(写法, 代价, 来源) 与是否完整音节」，写法同一位置完整性相同。
+type PositionForms = (Vec<(String, f64, EdgeKind)>, bool);
+
 /// 一串模式扩展后的结果：每个位置若干写法，第一种是用户敲的（代价 0），其余是模糊音（扣 ln 2）
 /// 或敲错变体（按类别与个人敲错表定代价）。拥有字符串，借出 [`SyllablePattern`]。
 #[derive(Debug, Clone, Default)]
 pub struct Expanded {
     /// 每个位置的 (写法, 代价, 来源) 与「是否完整音节」（同一位置的写法完整性相同）。
-    positions: Vec<(Vec<(String, f64, EdgeKind)>, bool)>,
+    positions: Vec<PositionForms>,
 
     /// 有没有任何一个位置带了敲的原样以外的写法：没有就不必逐条命中算代价。
     alternatives: bool,
 }
 
 impl Expanded {
-    pub(super) fn new(
-        positions: impl IntoIterator<Item = (Vec<(String, f64, EdgeKind)>, bool)>,
-    ) -> Self {
+    pub(super) fn new(positions: impl IntoIterator<Item = PositionForms>) -> Self {
         let positions: Vec<_> = positions.into_iter().collect();
         let alternatives = positions.iter().any(|(forms, _)| forms.len() > 1);
         Self {

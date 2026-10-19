@@ -33,12 +33,12 @@ impl Engine {
                 // 系统发音漏键（前后鼻音尾 g、平翘舌声母 h）：保留声母、只动一个固定音素，
                 // 成系统而非随机手滑，给低代价且标成 Phonetic（不被原样词保护一刀切退回）；
                 // 其余编辑（相邻键误碰、换位、多漏键）是随机手滑，按物理误触处理。
-                let (cost, edge) = if typo::is_velar_nasal_edit(pattern.text, &text) {
+                let (cost, edge) = if typo::is_velar_nasal_edit(pattern.text, text) {
                     (
                         self.typo_costs.velar_nasal_cost(accepted),
                         EdgeKind::Phonetic,
                     )
-                } else if typo::is_retroflex_edit(pattern.text, &text) {
+                } else if typo::is_retroflex_edit(pattern.text, text) {
                     (self.typo_costs.retroflex_cost(accepted), EdgeKind::Phonetic)
                 } else {
                     (

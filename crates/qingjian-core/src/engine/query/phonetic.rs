@@ -122,26 +122,27 @@ impl Engine {
                 // 视作完整命中并计系统发音代价，让它与原样词按词频竞争：`wangshan` 网上词频是望山的上百倍，
                 // 不能因为"末音节完整"这条硬规则把它压死（那是为真没打完的 xia→xiang 设计的）。
                 // 只对多字词放开：单字是最精确的输入单位，敲 ran 就该先给"然"，不能让补 g 的"让"抢首。
-                if complete_prefix && count >= 2 {
-                    if let Some(hit_last) = hit.syllables().nth(count - 1) {
-                        if hit_last != last.text.as_str() {
-                            let phonetic =
-                                if typo::is_velar_nasal_edit(&last.text, hit_last) {
-                                    Some(self.typo_costs.velar_nasal_cost(
-                                        self.learner.typo_count(&last.text, hit_last),
-                                    ))
-                                } else if typo::is_retroflex_edit(&last.text, hit_last) {
-                                    Some(self.typo_costs.retroflex_cost(
-                                        self.learner.typo_count(&last.text, hit_last),
-                                    ))
-                                } else {
-                                    None
-                                };
-                            if let Some(cost) = phonetic {
-                                full_last = true;
-                                penalty = penalty.max(cost);
-                            }
-                        }
+                if complete_prefix
+                    && count >= 2
+                    && let Some(hit_last) = hit.syllables().nth(count - 1)
+                    && hit_last != last.text.as_str()
+                {
+                    let phonetic = if typo::is_velar_nasal_edit(&last.text, hit_last) {
+                        Some(
+                            self.typo_costs
+                                .velar_nasal_cost(self.learner.typo_count(&last.text, hit_last)),
+                        )
+                    } else if typo::is_retroflex_edit(&last.text, hit_last) {
+                        Some(
+                            self.typo_costs
+                                .retroflex_cost(self.learner.typo_count(&last.text, hit_last)),
+                        )
+                    } else {
+                        None
+                    };
+                    if let Some(cost) = phonetic {
+                        full_last = true;
+                        penalty = penalty.max(cost);
                     }
                 }
                 scored.push(Scored {

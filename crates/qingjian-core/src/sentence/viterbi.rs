@@ -58,6 +58,7 @@ struct Node {
 ///
 /// 简拼位置（`w x q`）按前缀取词：每个格子的候选会多得多，由语言模型在路径上分辨。
 /// 全拼句子末尾的前缀太短时不算它（多半是没打完的音节）；前面已有简拼的句子里末尾单字母就是一个音节。
+#[allow(clippy::too_many_arguments)]
 pub fn convert(
     dictionaries: &[&Dictionary],
     positions: &[Vec<SyllablePattern<'_>>],
@@ -83,6 +84,7 @@ pub fn convert(
 
 /// 同 [`convert`]，但全拼句子末尾的单字母也当一个音节读（`huo z…` → 或者）：
 /// 给「整段拼音读法」与别的读法比分用，比分要两边覆盖同样多的字母。
+#[allow(clippy::too_many_arguments)]
 pub fn convert_whole(
     dictionaries: &[&Dictionary],
     positions: &[Vec<SyllablePattern<'_>>],
