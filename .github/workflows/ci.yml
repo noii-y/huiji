@@ -1,6 +1,6 @@
 # 两个 job：Linux 跑 fmt / clippy / 全 workspace 测试；Windows runner 编 Windows 壳并跑平台测试。
 # 平台特有的编译错（TSF 导出、WinUI）在 PR 里就暴露，不等发版。仓库公开，Actions 不计费。
-# apps/macos 不在 workspace（灰迹只发布 Windows），无对应的 CI 壳。
+# apps/macos、apps/linux 不在 workspace（灰迹只发布 Windows），无对应的 CI 壳；Windows crates 由 Windows job 覆盖，Linux core job 排除。
 # actions 一律钉到 commit（注释里是对应的标签），Dependabot 每周提 PR 更新；cargo 全加 --locked，Cargo.lock 没提交就报错。
 name: ci
 
@@ -34,11 +34,6 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
-      - name: Install Fcitx5 build and test dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev nlohmann-json3-dev
-
       - name: Format
         run: cargo fmt --all --check
 
@@ -47,15 +42,6 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --exclude qingjian-macos --exclude qingjian-windows-server --exclude qingjian-windows-tsf --exclude qingjian-windows-settings --locked
-
-      - name: Build and test Fcitx5 default panel
-        run: |
-          cargo build -p qingjian-linux-server --locked
-          cmake -S apps/linux/fcitx5 -B target/fcitx5-stage1 -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
-          cmake --build target/fcitx5-stage1 --parallel 2
-          env -u DBUS_SESSION_BUS_ADDRESS ctest --test-dir target/fcitx5-stage1 --output-on-failure
-          bash -n apps/linux/scripts/install.sh apps/linux/scripts/uninstall.sh apps/linux/scripts/package.sh apps/linux/scripts/package-install.sh
-          python3 apps/linux/tests/installation.py
 
   windows:
     runs-on: windows-latest
