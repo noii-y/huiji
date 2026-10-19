@@ -1,9 +1,9 @@
 //! 真机排序验证探针：连本会话管道，OpenSession，按字符串逐键发（撇号当音节分隔键 VK 0xDE），
 //! 每拍打印候选，结尾打印完整首选列表。用法：probe_input <管道> <拼音串>
-//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
-#![cfg(windows)]
+//! Windows 命名管道专用：非 Windows 平台只编译一个提示入口（`std::os::windows` 不存在）。
 use std::fs::OpenOptions;
 use std::io;
+#[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 
 use qingjian_platform::protocol::{
@@ -12,12 +12,21 @@ use qingjian_platform::protocol::{
 
 const SESSION: SessionId = SessionId(998);
 
+#[cfg(windows)]
 fn open_pipe(name: &str) -> io::Result<std::fs::File> {
     OpenOptions::new()
         .read(true)
         .write(true)
         .share_mode(0)
         .open(name)
+}
+
+#[cfg(not(windows))]
+fn open_pipe(_name: &str) -> io::Result<std::fs::File> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "命名管道探针仅支持 Windows",
+    ))
 }
 
 fn vk_of(c: char) -> u32 {
@@ -28,6 +37,7 @@ fn vk_of(c: char) -> u32 {
     }
 }
 
+#[cfg(windows)]
 fn main() {
     let mut args = std::env::args().skip(1);
     let name = args.next().unwrap_or(r"\\.\pipe\qingjian-1".to_string());
@@ -71,4 +81,9 @@ fn main() {
             println!("{c} -> {words:?}");
         }
     }
+}
+
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("probe_input 仅支持 Windows 命名管道，请在本机 Windows 上运行。");
 }

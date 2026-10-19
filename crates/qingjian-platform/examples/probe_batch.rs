@@ -1,9 +1,9 @@
 //! 批量排序探针：一条连接、每个用例开独立 Session（互不学习/不串上下文），
 //! 读 TSV（每行一个拼音串），输出「拼音 <TAB> 首选 <TAB> 前5」。用法：probe_batch <管道> <tsv路径>
-//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
-#![cfg(windows)]
+//! Windows 命名管道专用：非 Windows 平台只编译一个提示入口（`std::os::windows` 不存在）。
 use std::fs::OpenOptions;
 use std::io;
+#[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 
 use qingjian_platform::protocol::{
@@ -11,12 +11,21 @@ use qingjian_platform::protocol::{
     read_message, write_message,
 };
 
+#[cfg(windows)]
 fn open_pipe(name: &str) -> io::Result<std::fs::File> {
     OpenOptions::new()
         .read(true)
         .write(true)
         .share_mode(0)
         .open(name)
+}
+
+#[cfg(not(windows))]
+fn open_pipe(_name: &str) -> io::Result<std::fs::File> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "命名管道探针仅支持 Windows",
+    ))
 }
 
 fn vk_of(c: char) -> u32 {
@@ -34,6 +43,7 @@ fn recv(stream: &mut std::fs::File) -> ServerMessage {
     read_message(stream).expect("读应答失败").expect("对端关闭")
 }
 
+#[cfg(windows)]
 fn main() {
     let mut args = std::env::args().skip(1);
     let name = args.next().unwrap_or(r"\\.\pipe\qingjian-1".to_string());
@@ -108,4 +118,9 @@ fn main() {
         b = top5_hits,
         bp = 100.0 * top5_hits as f64 / total as f64,
     );
+}
+
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("probe_batch 仅支持 Windows 命名管道，请在本机 Windows 上运行。");
 }

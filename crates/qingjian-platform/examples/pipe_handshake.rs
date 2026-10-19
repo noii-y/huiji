@@ -1,9 +1,9 @@
 //! 真机握手探针：连本会话管道，OpenSession，逐键发 nihao，打印每拍候选。
 //! 用来判断 holder 是「只接受连接」还是「真的路由应答」。
-//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
-#![cfg(windows)]
+//! Windows 命名管道专用：非 Windows 平台只编译一个提示入口（`std::os::windows` 不存在）。
 use std::fs::OpenOptions;
 use std::io;
+#[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 
 use qingjian_platform::protocol::{
@@ -12,6 +12,7 @@ use qingjian_platform::protocol::{
 
 const SESSION: SessionId = SessionId(999);
 
+#[cfg(windows)]
 fn open_pipe(name: &str) -> io::Result<std::fs::File> {
     OpenOptions::new()
         .read(true)
@@ -20,6 +21,15 @@ fn open_pipe(name: &str) -> io::Result<std::fs::File> {
         .open(name)
 }
 
+#[cfg(not(windows))]
+fn open_pipe(_name: &str) -> io::Result<std::fs::File> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "命名管道探针仅支持 Windows",
+    ))
+}
+
+#[cfg(windows)]
 fn main() {
     let name = std::env::args()
         .nth(1)
@@ -72,4 +82,9 @@ fn main() {
             other => println!("{ch}: 非预期应答 {other:?}"),
         }
     }
+}
+
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("pipe_handshake 仅支持 Windows 命名管道，请在本机 Windows 上运行。");
 }
