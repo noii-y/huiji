@@ -43,10 +43,10 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Clippy
-        run: cargo clippy --workspace --exclude qingjian-macos --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --exclude qingjian-macos --exclude qingjian-windows-server --exclude qingjian-windows-tsf --exclude qingjian-windows-settings --all-targets --locked -- -D warnings
 
       - name: Test
-        run: cargo test --workspace --exclude qingjian-macos --locked
+        run: cargo test --workspace --exclude qingjian-macos --exclude qingjian-windows-server --exclude qingjian-windows-tsf --exclude qingjian-windows-settings --locked
 
       - name: Build and test Fcitx5 default panel
         run: |
