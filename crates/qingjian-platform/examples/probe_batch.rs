@@ -23,6 +23,7 @@ fn open_pipe(name: &str) -> io::Result<std::fs::File> {
         .open(name)
 }
 
+#[cfg(windows)]
 fn vk_of(c: char) -> u32 {
     if c == '\'' {
         0xDE
