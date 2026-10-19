@@ -126,12 +126,13 @@ impl Worker {
         );
         // 云这次没给整句（缩写、没把握），但本地已组出完整中文长句：补一次云端中译英。
         // 译文跟随本地首位中文；补不到（断网、超时）保持 None，顶部由端侧 opus-mt 兜底。
-        if reply.sentence.is_none() && reply.translation.is_none() {
-            if let Some(fill) = translation_fill_request(&request) {
-                tracing::info!(sequence = request.sequence, "云未给整句，补一次云端中译英");
-                if let Some(fill_reply) = self.handle(runtime, fill) {
-                    reply.translation = fill_reply.sentence;
-                }
+        if reply.sentence.is_none()
+            && reply.translation.is_none()
+            && let Some(fill) = translation_fill_request(&request)
+        {
+            tracing::info!(sequence = request.sequence, "云未给整句，补一次云端中译英");
+            if let Some(fill_reply) = self.handle(runtime, fill) {
+                reply.translation = fill_reply.sentence;
             }
         }
         // 空回复不进缓存：模型偶尔什么都不给（问字尤其），缓存住就等于这个问题以后永远没答案，

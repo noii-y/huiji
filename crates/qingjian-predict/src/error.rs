@@ -36,6 +36,6 @@ impl PredictError {
         let async_openai::error::OpenAIError::ApiError(response) = error else {
             return false;
         };
-        matches!(response.status_code.as_u16(), 401 | 402 | 403)
+        matches!(response.status_code.as_u16(), 401..=403)
     }
 }
