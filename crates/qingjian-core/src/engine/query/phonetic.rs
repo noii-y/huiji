@@ -125,17 +125,18 @@ impl Engine {
                 if complete_prefix && count >= 2 {
                     if let Some(hit_last) = hit.syllables().nth(count - 1) {
                         if hit_last != last.text.as_str() {
-                            let phonetic = if typo::is_velar_nasal_edit(&last.text, hit_last) {
-                                Some(self.typo_costs.velar_nasal_cost(
-                                    self.learner.typo_count(&last.text, hit_last),
-                                ))
-                            } else if typo::is_retroflex_edit(&last.text, hit_last) {
-                                Some(self.typo_costs.retroflex_cost(
-                                    self.learner.typo_count(&last.text, hit_last),
-                                ))
-                            } else {
-                                None
-                            };
+                            let phonetic =
+                                if typo::is_velar_nasal_edit(&last.text, hit_last) {
+                                    Some(self.typo_costs.velar_nasal_cost(
+                                        self.learner.typo_count(&last.text, hit_last),
+                                    ))
+                                } else if typo::is_retroflex_edit(&last.text, hit_last) {
+                                    Some(self.typo_costs.retroflex_cost(
+                                        self.learner.typo_count(&last.text, hit_last),
+                                    ))
+                                } else {
+                                    None
+                                };
                             if let Some(cost) = phonetic {
                                 full_last = true;
                                 penalty = penalty.max(cost);

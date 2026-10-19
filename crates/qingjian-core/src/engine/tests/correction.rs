@@ -396,10 +396,9 @@ fn common_multiword_phonetic_compensation_has_guards() {
 /// ran 就该先给 然（让 rang 高 52 倍也不上），shan 就该先给 山（上 shang 高 5 倍也不上）。
 #[test]
 fn single_syllable_not_compensated() {
-    let dictionary = Dictionary::parse(
-        "然\tran\t5000\n让\trang\t260000\n山\tshan\t92957\n上\tshang\t533168\n",
-    )
-    .unwrap();
+    let dictionary =
+        Dictionary::parse("然\tran\t5000\n让\trang\t260000\n山\tshan\t92957\n上\tshang\t533168\n")
+            .unwrap();
     let mut engine = Engine::new(dictionary);
     engine.set_input("ran");
     assert_eq!(engine.query().unwrap().candidates.items[0].text, "然");

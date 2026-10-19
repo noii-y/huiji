@@ -41,7 +41,10 @@ pub(crate) fn string_combo(
 
 /// Shift+字母的下拉：选项直接由 [`ShiftLetter::ALL`] 生成，免得再抄一份表（顺序要和它一致）。
 /// 通用页与高级页都用它，所以放开可见性。
-pub(crate) fn shift_letter_combo(current: ShiftLetter, callback: Callback<Option<usize>>) -> ComboBox {
+pub(crate) fn shift_letter_combo(
+    current: ShiftLetter,
+    callback: Callback<Option<usize>>,
+) -> ComboBox {
     ComboBox::new()
         .items_source(ShiftLetter::ALL.iter().map(|mode| mode.label()))
         .selected_index(ShiftLetter::ALL.iter().position(|mode| *mode == current))

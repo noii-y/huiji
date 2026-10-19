@@ -69,7 +69,6 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_click(context.message(Message::ClearInputLog))
                 .content("清空输入日志"),
         ),
-
         // —— 一般不用改的输入选项：从「通用」页挪过来，给需要的人留着 ——
         note("一般不用改的输入选项"),
         field(

@@ -49,9 +49,9 @@ impl Drop for SingleInstance {
 /// 用 `Local\` 前缀，和命名管道一致，多个 RDP 会话各有一个。
 #[cfg(windows)]
 fn acquire_single_instance() -> SingleInstanceOutcome {
-    use windows::core::{HSTRING, PCWSTR};
     use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, GetLastError};
     use windows::Win32::System::Threading::CreateMutexW;
+    use windows::core::{HSTRING, PCWSTR};
 
     let name = HSTRING::from(format!("Local\\QingjianServer-{}", current_session_id()));
     let handle = match unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) } {

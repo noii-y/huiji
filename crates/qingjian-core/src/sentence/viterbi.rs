@@ -7,9 +7,8 @@ use qingjian_dictionary::{Dictionary, Match, SyllablePattern};
 
 use super::{
     ABBREVIATED_SPAN_CANDIDATES, BEAM_WIDTH, Context, Conversion, LanguageModel,
-    MAX_WORD_SYLLABLES, MIN_PARTIAL_LETTERS, Personal, PHONETIC_COMMON_FLOOR,
-    PHONETIC_COMMON_PENALTY, PHONETIC_COMMON_RATIO, SPAN_CANDIDATES, SentenceWord, SpanCache,
-    SpanWord,
+    MAX_WORD_SYLLABLES, MIN_PARTIAL_LETTERS, PHONETIC_COMMON_FLOOR, PHONETIC_COMMON_PENALTY,
+    PHONETIC_COMMON_RATIO, Personal, SPAN_CANDIDATES, SentenceWord, SpanCache, SpanWord,
     fallback_log_prob, transition_log_prob,
 };
 use crate::ranking::weight_bonus;
@@ -432,15 +431,17 @@ fn span_candidates(
     });
     scored
         .into_iter()
-        .map(|(_, penalty, strict_penalty, emission, rare, hit)| SpanWord {
-            text: hit.text.to_owned(),
-            syllables: hit.syllables().map(str::to_owned).collect(),
-            frequency: hit.frequency,
-            penalty,
-            strict_penalty,
-            emission,
-            rare,
-        })
+        .map(
+            |(_, penalty, strict_penalty, emission, rare, hit)| SpanWord {
+                text: hit.text.to_owned(),
+                syllables: hit.syllables().map(str::to_owned).collect(),
+                frequency: hit.frequency,
+                penalty,
+                strict_penalty,
+                emission,
+                rare,
+            },
+        )
         .collect()
 }
 

@@ -196,7 +196,11 @@ impl DiskCache {
             return;
         }
         for entry in stored.entries {
-            if self.entries.insert(entry.key.clone(), entry.reply).is_none() {
+            if self
+                .entries
+                .insert(entry.key.clone(), entry.reply)
+                .is_none()
+            {
                 self.order.push_back(entry.key);
             }
         }
@@ -249,7 +253,11 @@ mod tests {
             kind: PredictionKind::Compose,
             before: before.to_owned(),
             after: String::new(),
-            pinyin: letters.chars().map(|c| c.to_string()).collect::<Vec<_>>().join("'"),
+            pinyin: letters
+                .chars()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>()
+                .join("'"),
             letters: letters.to_owned(),
             syllables: letters.len(),
             candidates: vec!["本地".to_owned()],

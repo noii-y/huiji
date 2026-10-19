@@ -2,9 +2,7 @@
 
 mod state;
 
-use qingjian_core::{
-    Candidate, CandidateLayout, CandidateList, CloudWord, Query, SurroundingText,
-};
+use qingjian_core::{Candidate, CandidateLayout, CandidateList, CloudWord, Query, SurroundingText};
 use qingjian_platform::protocol::{Frame, PROTOCOL_VERSION, PreeditKind, PreeditSegment};
 
 pub(super) use self::state::{Composed, TypedKeys};
@@ -347,7 +345,11 @@ impl Router {
             return self.compose_translation.clone();
         }
         let translation = top.translation.as_ref()?;
-        let senses: Vec<String> = translation.senses().iter().map(|s| s.text.clone()).collect();
+        let senses: Vec<String> = translation
+            .senses()
+            .iter()
+            .map(|s| s.text.clone())
+            .collect();
         (!senses.is_empty()).then(|| senses.join("；"))
     }
 }

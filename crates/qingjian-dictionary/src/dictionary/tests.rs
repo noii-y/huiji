@@ -27,7 +27,9 @@ fn strips_leading_utf8_bom_so_first_word_is_clean() {
     assert_eq!(texts(&matches), ["开发"]);
     assert_eq!(matches[0].text, "开发");
     assert!(
-        dictionary.entries().all(|entry| !entry.text.starts_with('﻿')),
+        dictionary
+            .entries()
+            .all(|entry| !entry.text.starts_with('﻿')),
         "词条里不应残留 BOM"
     );
     // 对照：不带 BOM 时词数与查询结果完全一致

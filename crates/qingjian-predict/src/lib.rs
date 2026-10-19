@@ -9,8 +9,8 @@ mod cache;
 mod chat_client;
 mod cloud_predictor;
 mod config;
-mod disk_cache;
 mod connection;
+mod disk_cache;
 #[cfg(any(
     feature = "local-nmt",
     feature = "local-nmt-mkl",

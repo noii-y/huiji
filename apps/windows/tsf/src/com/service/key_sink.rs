@@ -469,7 +469,9 @@ fn eats_key(
 mod tests {
     use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
 
-    use super::{digit_passthrough_native, eats_key, eats_without_server, passthrough_digit_to_app, Next};
+    use super::{
+        Next, digit_passthrough_native, eats_key, eats_without_server, passthrough_digit_to_app,
+    };
     use crate::com::key::event::to_key_event;
 
     /// 中文模式（`caps` / `english_mode` 都灭）。
@@ -574,18 +576,43 @@ mod tests {
             english_mode: true,
             ..KeyModifiers::default()
         };
-        assert!(!eats_key(&with_modifiers(0x41, 'a', english), false, false, false)); // 字母
-        assert!(!eats_key(&with_modifiers(0x32, '2', english), false, false, false)); // 数字
-        assert!(!eats_key(&with_modifiers(0xBD, '-', english), false, false, false)); // 标点
+        assert!(!eats_key(
+            &with_modifiers(0x41, 'a', english),
+            false,
+            false,
+            false
+        )); // 字母
+        assert!(!eats_key(
+            &with_modifiers(0x32, '2', english),
+            false,
+            false,
+            false
+        )); // 数字
+        assert!(!eats_key(
+            &with_modifiers(0xBD, '-', english),
+            false,
+            false,
+            false
+        )); // 标点
         // 带 Ctrl 的组合键也归应用
         let combo = KeyModifiers {
             english_mode: true,
             ctrl: true,
             ..KeyModifiers::default()
         };
-        assert!(!eats_key(&with_modifiers(0x43, 'c', combo), false, false, false));
+        assert!(!eats_key(
+            &with_modifiers(0x43, 'c', combo),
+            false,
+            false,
+            false
+        ));
         // 即便有残留的组句标记，英文模式也直通，不碰组句
-        assert!(!eats_key(&with_modifiers(0x41, 'a', english), true, false, false));
+        assert!(!eats_key(
+            &with_modifiers(0x41, 'a', english),
+            true,
+            false,
+            false
+        ));
         // 中文模式不受影响：小写字母照样吃
         assert!(eats_key(
             &with_modifiers(0x41, 'a', KeyModifiers::default()),

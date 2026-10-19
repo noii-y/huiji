@@ -120,13 +120,12 @@ impl Expanded {
                 }
                 .accepts(syllable)
             })
-            .map_or(0.0, |(_, cost, kind)| {
-                if kind.is_physical() {
-                    *cost
-                } else {
-                    0.0
-                }
-            })
+            .map_or(
+                0.0,
+                |(_, cost, kind)| {
+                    if kind.is_physical() { *cost } else { 0.0 }
+                },
+            )
     }
 
     /// 一条命中的总代价：各位置代价之和。没有任何替代写法时直接 0。
@@ -169,10 +168,7 @@ mod tests {
     #[test]
     fn costs_follow_the_matched_form() {
         let mut expanded = Expanded::new([
-            (
-                vec![("mei".to_owned(), 0.0, EdgeKind::Original)],
-                true,
-            ),
+            (vec![("mei".to_owned(), 0.0, EdgeKind::Original)], true),
             (
                 vec![
                     ("gan".to_owned(), 0.0, EdgeKind::Original),
@@ -180,10 +176,7 @@ mod tests {
                 ],
                 true,
             ),
-            (
-                vec![("x".to_owned(), 0.0, EdgeKind::Original)],
-                false,
-            ),
+            (vec![("x".to_owned(), 0.0, EdgeKind::Original)], false),
         ]);
         expanded.push_alternative(1, "guan", 4.5, EdgeKind::Physical);
         expanded.push_alternative(1, "gang", 4.5, EdgeKind::Physical); // 已有更便宜的模糊音写法，保留 0.7
@@ -196,10 +189,7 @@ mod tests {
         assert_eq!(expanded.strict_penalty(["mei", "guan", "xia"]), 4.5);
         assert_eq!(expanded.strict_penalty(["mei", "gang", "xi"]), 0.0);
         assert_eq!(expanded.positions()[1].len(), 3);
-        let plain = Expanded::new([(
-            vec![("ni".to_owned(), 0.0, EdgeKind::Original)],
-            true,
-        )]);
+        let plain = Expanded::new([(vec![("ni".to_owned(), 0.0, EdgeKind::Original)], true)]);
         assert!(!plain.has_alternatives());
         assert_eq!(plain.penalty(["mi"]), 0.0);
     }
@@ -207,14 +197,8 @@ mod tests {
     #[test]
     fn phonetic_edges_are_not_strict() {
         let mut expanded = Expanded::new([
-            (
-                vec![("shen".to_owned(), 0.0, EdgeKind::Original)],
-                true,
-            ),
-            (
-                vec![("huo".to_owned(), 0.0, EdgeKind::Original)],
-                true,
-            ),
+            (vec![("shen".to_owned(), 0.0, EdgeKind::Original)], true),
+            (vec![("huo".to_owned(), 0.0, EdgeKind::Original)], true),
         ]);
         expanded.push_alternative(0, "sheng", 3.5, EdgeKind::Phonetic);
         // 系统发音纠错有总代价，但不算随机手滑

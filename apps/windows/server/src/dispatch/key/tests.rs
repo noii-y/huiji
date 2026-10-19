@@ -165,7 +165,10 @@ fn tab_selects_cloud_sentence_keeps_selection_and_space_commits() {
     let first = key(&mut router, 9, None, normal);
     assert_eq!(first.1, None);
     assert!(first.2.sentence_selected);
-    assert_eq!(first.2.translation.as_deref(), Some("controllable completion"));
+    assert_eq!(
+        first.2.translation.as_deref(),
+        Some("controllable completion")
+    );
     // 选中后本地候选行不高亮。
     assert_eq!(first.2.highlight, usize::MAX);
 
@@ -199,7 +202,10 @@ fn enter_commits_cloud_sentence_when_selected_but_raw_when_not() {
     // 未选中时回车仍是原始字母（微软拼音习惯）。
     compose(&mut router, "qq", normal);
     router.sentence = Some("可控补全".into());
-    assert_eq!(key(&mut router, 0x0D, None, normal).1.as_deref(), Some("qq"));
+    assert_eq!(
+        key(&mut router, 0x0D, None, normal).1.as_deref(),
+        Some("qq")
+    );
 }
 
 #[test]

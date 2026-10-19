@@ -6,7 +6,7 @@ use qingjian_core::{Prediction, PredictionPolicy, PredictionRequest, Predictor};
 
 use crate::chat_client::ChatClient;
 use crate::config::PredictConfig;
-use crate::disk_cache::{DiskCache, DEFAULT_DISK_CAPACITY};
+use crate::disk_cache::{DEFAULT_DISK_CAPACITY, DiskCache};
 use crate::error::PredictError;
 use crate::worker::Worker;
 
