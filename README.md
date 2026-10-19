@@ -1,3 +1,5 @@
+[English](README.en.md) | **中文**
+
 <p align="center">
   <img src="https://cdn.jsdelivr.net/gh/noii-y/huiji@e92e984e46fd0e39b1653cbfc2a7d1a3948bee10/huiji/assets/huiji-banner.webp" alt="灰迹 Huiji" width="100%">
 </p>
