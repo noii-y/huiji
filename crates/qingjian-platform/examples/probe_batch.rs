@@ -1,5 +1,7 @@
 //! 批量排序探针：一条连接、每个用例开独立 Session（互不学习/不串上下文），
 //! 读 TSV（每行一个拼音串），输出「拼音 <TAB> 首选 <TAB> 前5」。用法：probe_batch <管道> <tsv路径>
+//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
+#![cfg(windows)]
 use std::fs::OpenOptions;
 use std::io;
 use std::os::windows::fs::OpenOptionsExt;

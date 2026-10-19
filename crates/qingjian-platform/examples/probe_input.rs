@@ -1,5 +1,7 @@
 //! 真机排序验证探针：连本会话管道，OpenSession，按字符串逐键发（撇号当音节分隔键 VK 0xDE），
 //! 每拍打印候选，结尾打印完整首选列表。用法：probe_input <管道> <拼音串>
+//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
+#![cfg(windows)]
 use std::fs::OpenOptions;
 use std::io;
 use std::os::windows::fs::OpenOptionsExt;

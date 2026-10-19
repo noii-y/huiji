@@ -1,5 +1,7 @@
 //! 真机握手探针：连本会话管道，OpenSession，逐键发 nihao，打印每拍候选。
 //! 用来判断 holder 是「只接受连接」还是「真的路由应答」。
+//! Windows 命名管道专用：非 Windows 平台不编译（`std::os::windows` 不存在）。
+#![cfg(windows)]
 use std::fs::OpenOptions;
 use std::io;
 use std::os::windows::fs::OpenOptionsExt;

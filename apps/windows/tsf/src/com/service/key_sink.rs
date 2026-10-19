@@ -224,9 +224,7 @@ impl TextService_Impl {
         }
         // Server 交互在这段借用里做完，放掉借用再走编辑会话。
         let mut guard = self.engine.borrow_mut();
-        let Some(client) = guard.as_mut() else {
-            return None;
-        };
+        let client = guard.as_mut()?;
         // 组句被应用终止过：先让 Server 清掉残留的拼音（文本已在文档里，交出的丢弃）。
         let response = if self.shared.take_server_stale() {
             client.commit().and_then(|_| client.key(event))
