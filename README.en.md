@@ -19,6 +19,10 @@ The part people don't expect is the sentence translation. Type `nijintianwanshan
 - **Gaming-friendly.** Yields to fullscreen games, and the key layout matches Microsoft Pinyin, so switching between IMEs doesn't fight your muscle memory.
 - **Optional cloud suggestions.** Off by default. If you want better long-tail suggestions, point it at any OpenAI-compatible endpoint with your own key (a DeepSeek key runs roughly 1–3 CNY/month 【estimated】).
 
+## Demo
+
+[▶ 11-second demo, recorded offline](docs/huiji-demo.mp4)
+
 ## Install (Windows x64)
 
 Download the latest installer from [Releases](https://github.com/noii-y/huiji/releases). Current version: v0.1.8 (2026-10-08). The installer is self-contained and includes the translation model.
