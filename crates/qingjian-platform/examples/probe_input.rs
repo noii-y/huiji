@@ -1,15 +1,19 @@
 //! 真机排序验证探针：连本会话管道，OpenSession，按字符串逐键发（撇号当音节分隔键 VK 0xDE），
 //! 每拍打印候选，结尾打印完整首选列表。用法：probe_input <管道> <拼音串>
 //! Windows 命名管道专用：非 Windows 平台只编译一个提示入口（`std::os::windows` 不存在）。
+#[cfg(windows)]
 use std::fs::OpenOptions;
+#[cfg(windows)]
 use std::io;
 #[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 
+#[cfg(windows)]
 use qingjian_platform::protocol::{
     ClientMessage, KeyEvent, KeyModifiers, PROTOCOL_VERSION, SessionId, read_message, write_message,
 };
 
+#[cfg(windows)]
 const SESSION: SessionId = SessionId(998);
 
 #[cfg(windows)]
@@ -21,14 +25,7 @@ fn open_pipe(name: &str) -> io::Result<std::fs::File> {
         .open(name)
 }
 
-#[cfg(not(windows))]
-fn open_pipe(_name: &str) -> io::Result<std::fs::File> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "命名管道探针仅支持 Windows",
-    ))
-}
-
+#[cfg(windows)]
 fn vk_of(c: char) -> u32 {
     if c == '\'' {
         0xDE

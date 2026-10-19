@@ -1,15 +1,19 @@
 //! 真机握手探针：连本会话管道，OpenSession，逐键发 nihao，打印每拍候选。
 //! 用来判断 holder 是「只接受连接」还是「真的路由应答」。
 //! Windows 命名管道专用：非 Windows 平台只编译一个提示入口（`std::os::windows` 不存在）。
+#[cfg(windows)]
 use std::fs::OpenOptions;
+#[cfg(windows)]
 use std::io;
 #[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 
+#[cfg(windows)]
 use qingjian_platform::protocol::{
     ClientMessage, KeyEvent, KeyModifiers, PROTOCOL_VERSION, SessionId, read_message, write_message,
 };
 
+#[cfg(windows)]
 const SESSION: SessionId = SessionId(999);
 
 #[cfg(windows)]
@@ -19,14 +23,6 @@ fn open_pipe(name: &str) -> io::Result<std::fs::File> {
         .write(true)
         .share_mode(0)
         .open(name)
-}
-
-#[cfg(not(windows))]
-fn open_pipe(_name: &str) -> io::Result<std::fs::File> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "命名管道探针仅支持 Windows",
-    ))
 }
 
 #[cfg(windows)]
