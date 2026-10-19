@@ -21,11 +21,11 @@ The part people don't expect is the sentence translation. Type `nijintianwanshan
 
 ## Demo
 
-[▶ 11-second demo, recorded offline](docs/huiji-demo.mp4)
+[▶ 11-second demo, recorded offline](https://github.com/noii-y/huiji/releases/download/v0.2.0/huiji-demo.mp4)
 
 ## Install (Windows x64)
 
-Download the latest installer from [Releases](https://github.com/noii-y/huiji/releases). Current version: v0.1.8 (2026-10-08). The installer is self-contained and includes the translation model.
+Download the latest installer from [Releases](https://github.com/noii-y/huiji/releases). Current version: v0.2.0 (2026-10-18). The installer is self-contained and includes the translation model.
 
 ## Offline & Privacy
 

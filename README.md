@@ -18,7 +18,7 @@
 
 ## 11 秒看懂灰迹
 
-[▶ 看演示视频（11 秒，断网录制）](docs/huiji-demo.mp4)
+[▶ 看演示视频（11 秒，断网录制）](https://github.com/noii-y/huiji/releases/download/v0.2.0/huiji-demo.mp4)
 
 ## 为什么叫灰迹
 
